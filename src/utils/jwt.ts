@@ -33,3 +33,22 @@ export function verifyRefreshToken(token: string): { sub: string } {
     throw new UnauthorizedError("Invalid or expired refresh token");
   }
 }
+
+export function signResetToken(payload: { sub: string }): string {
+  return jwt.sign({ ...payload, purpose: "reset" }, env.JWT_ACCESS_SECRET, {
+    expiresIn: "15m",
+  });
+}
+
+export function verifyResetToken(token: string): { sub: string } {
+  try {
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as {
+      sub: string;
+      purpose: string;
+    };
+    if (decoded.purpose !== "reset") throw new Error();
+    return { sub: decoded.sub };
+  } catch {
+    throw new UnauthorizedError("Invalid or expired reset token");
+  }
+}

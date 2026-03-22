@@ -13,39 +13,41 @@ vi.mock("../../config/env.js", () => ({
   },
 }));
 
-const { mockDb, mockWhere, mockReturning, mockTx, mockVerifyRefreshToken } = vi.hoisted(() => {
-  const mockWhere = vi.fn();
-  const mockReturning = vi.fn();
+const { mockDb, mockWhere, mockReturning, mockTx, mockVerifyRefreshToken, mockVerifyResetToken } =
+  vi.hoisted(() => {
+    const mockWhere = vi.fn();
+    const mockReturning = vi.fn();
 
-  const mockTx = {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: mockWhere,
-    innerJoin: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockReturnThis(),
-    returning: mockReturning,
-    update: vi.fn().mockReturnThis(),
-    set: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-  };
+    const mockTx = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: mockWhere,
+      innerJoin: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      returning: mockReturning,
+      update: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+    };
 
-  const mockDb = {
-    transaction: vi.fn(),
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: mockWhere,
-    innerJoin: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    values: vi.fn().mockReturnThis(),
-    returning: mockReturning,
-    delete: vi.fn().mockReturnThis(),
-  };
+    const mockDb = {
+      transaction: vi.fn(),
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: mockWhere,
+      innerJoin: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      returning: mockReturning,
+      delete: vi.fn().mockReturnThis(),
+    };
 
-  const mockVerifyRefreshToken = vi.fn();
+    const mockVerifyRefreshToken = vi.fn();
+    const mockVerifyResetToken = vi.fn();
 
-  return { mockDb, mockWhere, mockReturning, mockTx, mockVerifyRefreshToken };
-});
+    return { mockDb, mockWhere, mockReturning, mockTx, mockVerifyRefreshToken, mockVerifyResetToken };
+  });
 
 vi.mock("../../db/index.js", () => ({ db: mockDb }));
 
@@ -57,13 +59,23 @@ vi.mock("../../utils/password.js", () => ({
 vi.mock("../../utils/jwt.js", () => ({
   signAccessToken: vi.fn(),
   signRefreshToken: vi.fn(),
+  signResetToken: vi.fn(),
   verifyRefreshToken: mockVerifyRefreshToken,
+  verifyResetToken: mockVerifyResetToken,
 }));
 
-import { register, login, refresh, getUserPermissions, changePassword } from "../auth.service.js";
+import {
+  register,
+  login,
+  refresh,
+  getUserPermissions,
+  changePassword,
+  requestPasswordReset,
+  resetPassword,
+} from "../auth.service.js";
 import { ConflictError, UnauthorizedError, NotFoundError } from "../../utils/errors.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
-import { signAccessToken, signRefreshToken } from "../../utils/jwt.js";
+import { signAccessToken, signRefreshToken, signResetToken } from "../../utils/jwt.js";
 
 const MOCK_USER = {
   id: "user-uuid",
@@ -111,7 +123,9 @@ describe("auth.service", () => {
     vi.mocked(verifyPassword).mockResolvedValue(true);
     vi.mocked(signAccessToken).mockReturnValue("access-token");
     vi.mocked(signRefreshToken).mockReturnValue("new-refresh-token");
+    vi.mocked(signResetToken).mockReturnValue("reset-token");
     mockVerifyRefreshToken.mockReturnValue({ sub: "user-uuid" });
+    mockVerifyResetToken.mockReturnValue({ sub: "user-uuid" });
   });
 
   // --- getUserPermissions ---
@@ -386,6 +400,67 @@ describe("auth.service", () => {
       await expect(
         changePassword("user-uuid", { oldPassword: "wrong", newPassword: "newpassword123" }),
       ).rejects.toThrow(UnauthorizedError);
+    });
+  });
+
+  // --- requestPasswordReset ---
+
+  describe("requestPasswordReset", () => {
+    it("returns resetToken when user is found by email", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_USER]);
+
+      const result = await requestPasswordReset("test@example.com");
+
+      expect(signResetToken).toHaveBeenCalledWith({ sub: "user-uuid" });
+      expect(result).toEqual({ resetToken: "reset-token" });
+    });
+
+    it("throws NotFoundError when email is not found", async () => {
+      mockWhere.mockResolvedValueOnce([]);
+
+      await expect(requestPasswordReset("unknown@example.com")).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  // --- resetPassword ---
+
+  describe("resetPassword", () => {
+    beforeEach(() => {
+      mockDb.transaction.mockImplementation(
+        async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx),
+      );
+    });
+
+    it("updates password hash and revokes all refresh tokens on success", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_USER]); // find user by sub
+      vi.mocked(hashPassword).mockResolvedValueOnce("new-hashed-password");
+      mockWhere.mockResolvedValueOnce(undefined); // tx.update.set.where
+      mockWhere.mockResolvedValueOnce(undefined); // tx.delete.where
+
+      await resetPassword({ token: "reset-token", newPassword: "newpassword123" });
+
+      expect(mockVerifyResetToken).toHaveBeenCalledWith("reset-token");
+      expect(hashPassword).toHaveBeenCalledWith("newpassword123");
+      expect(mockTx.update).toHaveBeenCalled();
+      expect(mockTx.delete).toHaveBeenCalled();
+    });
+
+    it("throws UnauthorizedError when reset token is invalid", async () => {
+      mockVerifyResetToken.mockImplementationOnce(() => {
+        throw new UnauthorizedError("Invalid or expired reset token");
+      });
+
+      await expect(
+        resetPassword({ token: "bad-token", newPassword: "newpassword123" }),
+      ).rejects.toThrow(UnauthorizedError);
+    });
+
+    it("throws NotFoundError when user from token is not found", async () => {
+      mockWhere.mockResolvedValueOnce([]); // user not found
+
+      await expect(
+        resetPassword({ token: "reset-token", newPassword: "newpassword123" }),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 });
