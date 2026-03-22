@@ -84,7 +84,7 @@ package.json
 
 ### Phase 2: Authentication Core
 - [x] Task 2.1: Utilities (password, jwt, response, errors, async-handler)
-- [ ] Task 2.2: Validation Schemas (validate middleware, auth validators)
+- [x] Task 2.2: Validation Schemas (validate middleware, auth validators)
 - [ ] Task 2.3: Auth Service (register, login)
 - [ ] Task 2.4: Auth Routes + App Setup
 

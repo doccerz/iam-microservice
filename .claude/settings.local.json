@@ -14,7 +14,10 @@
       "Bash(find /c/Users/babin/code/user-microservice-js -maxdepth 2 -type f \\\\\\(-name *.test.ts -o -name *.spec.ts -o -name jest.config.* -o -name vitest.config.* \\\\\\))",
       "Bash(npx vitest:*)",
       "Bash(npm list:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(node -e \"const z = require\\(''/home/babin/code/user-microservice-js/node_modules/zod''\\); console.log\\(z.version || ''no version''\\); const s = z.z || z; const schema = s.object\\({email: s.string\\(\\).email\\(\\)}\\); const r = schema.safeParse\\({email: ''bad''}\\); console.log\\(JSON.stringify\\(r.error?.issues\\)\\);\")",
+      "Bash(npm test:*)",
+      "Bash(./node_modules/.bin/vitest run:*)"
     ]
   }
 }
