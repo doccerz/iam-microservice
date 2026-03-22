@@ -11,7 +11,7 @@ import {
 } from "../db/schema/index.js";
 import { env } from "../config/env.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
-import { signAccessToken, signRefreshToken } from "../utils/jwt.js";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { ConflictError, UnauthorizedError } from "../utils/errors.js";
 import type { RegisterInput, LoginInput } from "../validators/auth.validators.js";
 
@@ -86,4 +86,38 @@ export async function login(data: LoginInput) {
   });
 
   return { accessToken, refreshToken, user: { id: user.id, email: user.email } };
+}
+
+export async function refresh(token: string) {
+  const { sub: userId } = verifyRefreshToken(token);
+
+  const [stored] = await db
+    .select()
+    .from(refreshTokens)
+    .where(eq(refreshTokens.token, token));
+  if (!stored || stored.expiresAt < new Date()) {
+    throw new UnauthorizedError("Invalid or expired refresh token");
+  }
+
+  await db.delete(refreshTokens).where(eq(refreshTokens.token, token));
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  if (!user || !user.isActive) throw new UnauthorizedError("Invalid or expired refresh token");
+
+  const userPermissions = await getUserPermissions(userId);
+
+  const accessToken = signAccessToken({
+    sub: userId,
+    email: user.email,
+    permissions: userPermissions,
+  });
+  const newRefreshToken = signRefreshToken({ sub: userId });
+
+  await db.insert(refreshTokens).values({
+    userId,
+    token: newRefreshToken,
+    expiresAt: new Date(Date.now() + parseExpiry(env.JWT_REFRESH_EXPIRY)),
+  });
+
+  return { accessToken, refreshToken: newRefreshToken };
 }
