@@ -17,16 +17,17 @@
 Every task MUST follow this exact workflow in order. Do NOT skip steps.
 
 1. **Update codebase** - checkout main and pull
-1. **Create a NEW branch from `main`** — e.g., `feat/task-X.Y-description`. Never reuse another task's branch.
-2. **Write failing tests FIRST** — before writing any implementation code
-3. **Git commit** the failing tests
-4. **Implement the code** to make the tests pass
-5. **Git commit** the implementation
-6. **Run the tests** and ensure they pass
-7. **Git commit** any fixes needed to pass tests
-8. **Mark the task `[x]`** in `specs/v1/implementation-plan.md` and commit
-9. **Push** the branch to remote
-10. **Create a PR** to main
+2. **Create a NEW branch from `main`** — e.g., `feat/task-X.Y-description`. Never reuse another task's branch.
+3. **Write failing tests FIRST** — before writing any implementation code
+4. **Git commit** the failing tests
+5. **Implement the code** to make the tests pass
+6. **Git commit** the implementation
+7. **Run the tests** and ensure they pass
+8. **Git commit** any fixes needed to pass tests
+9. **Update CLAUDE.md** call /claude-md-management:revise-claude-md
+10. **Mark the task `[x]`** in `specs/v1/implementation-plan.md` and commit
+11. **Push** the branch to remote
+12. **Create a PR** to main
 
 ```mermaid
 graph TD
@@ -37,9 +38,10 @@ graph TD
     C --> D[Git commit]
     D --> E[Pass the tests]
     E --> F[Mark task done in implementation-plan.md]
-    F --> G[Git commit]
-    G --> H[Push]
-    H --> I[Create PR to main]
+    F --> G[Update CLAUDE.md]
+    G --> H[Git commit]
+    H --> I[Push]
+    I --> J[Create PR to main]
 ```
 
 **Violations**: Skipping the test-first step, reusing another task's branch, writing all code without intermediate commits, skipping the task status update, or pushing directly to main are NOT acceptable.

@@ -35,6 +35,7 @@ router.get("/path", authenticate, authorize("resource:action"), asyncHandler(...
 - `authenticate` — extracts `Bearer` token, sets `req.user`, calls `next(err)` on failure
 - `authorize(...permissions)` — factory; AND-logic check of all perms against `req.user.permissions`; `authorize()` with no args always passes
 - `validate(schema)` — factory; calls `sendError` + returns (no `next`) on failure; replaces `req.body` with transformed data on success
+- `validateQuery(schema)` — same as `validate` but parses `req.query`; use for GET endpoints with query params
 
 ## Service Layer
 
@@ -77,6 +78,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 - `loginSchema` uses `z.string().min(1)` for password (no strength check)
 - Optional fields: `.optional()` not `.nullable()`
 - One file per domain: `auth.validators.ts`, `users.validators.ts`
+- **Boolean query params:** `z.coerce.boolean()` is a trap — it coerces any non-empty string to `true` (including `"false"`). Use a manual transform: `z.string().optional().transform(v => v === undefined ? undefined : v === "true")`
 
 ## TypeScript Type Patterns
 
