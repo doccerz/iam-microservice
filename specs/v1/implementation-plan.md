@@ -90,7 +90,7 @@ package.json
 
 ### Phase 3: Authorization Middleware & Refresh Tokens
 - [x] Task 3.1: JWT Validation Middleware
-- [ ] Task 3.2: Permission Guard
+- [x] Task 3.2: Permission Guard
 - [ ] Task 3.3: Refresh Token Endpoint
 
 ### Phase 4: Account Lifecycle & Admin Routes
