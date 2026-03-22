@@ -19,13 +19,22 @@ vi.mock("../../services/auth.service.js", () => ({
   login: vi.fn(),
   refresh: vi.fn(),
   changePassword: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  resetPassword: vi.fn(),
 }));
 
 vi.mock("../../db/index.js", () => ({ db: {} }));
 
 import authRouter from "../auth.routes.js";
-import { register, login, refresh, changePassword } from "../../services/auth.service.js";
-import { ConflictError, UnauthorizedError } from "../../utils/errors.js";
+import {
+  register,
+  login,
+  refresh,
+  changePassword,
+  requestPasswordReset,
+  resetPassword,
+} from "../../services/auth.service.js";
+import { ConflictError, UnauthorizedError, NotFoundError } from "../../utils/errors.js";
 
 const MOCK_USER = { id: "user-uuid", email: "test@example.com", createdAt: new Date() };
 const MOCK_LOGIN_RESULT = {
@@ -182,6 +191,61 @@ describe("auth.routes", () => {
       };
 
       const handler = getHandler("post", "/change-password");
+      await handler!(req, res, next);
+      await Promise.resolve(); // flush .catch(next) microtask
+
+      expect(next).toHaveBeenCalledWith(err);
+    });
+  });
+
+  describe("POST /reset-password", () => {
+    it("calls requestPasswordReset with email and responds 200 on success", async () => {
+      vi.mocked(requestPasswordReset).mockResolvedValueOnce({ resetToken: "reset-token" });
+      const { req, res, next } = makeReqRes({ email: "test@example.com" });
+
+      const handler = getHandler("post", "/reset-password");
+      await handler!(req, res, next);
+
+      expect(requestPasswordReset).toHaveBeenCalledWith("test@example.com");
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: { resetToken: "reset-token" } });
+    });
+
+    it("passes NotFoundError to next when email not found", async () => {
+      const err = new NotFoundError("User not found");
+      vi.mocked(requestPasswordReset).mockRejectedValueOnce(err);
+      const { req, res, next } = makeReqRes({ email: "unknown@example.com" });
+
+      const handler = getHandler("post", "/reset-password");
+      await handler!(req, res, next);
+      await Promise.resolve(); // flush .catch(next) microtask
+
+      expect(next).toHaveBeenCalledWith(err);
+    });
+  });
+
+  describe("POST /reset-password/confirm", () => {
+    it("calls resetPassword with req.body and responds 200 on success", async () => {
+      vi.mocked(resetPassword).mockResolvedValueOnce(undefined);
+      const { req, res, next } = makeReqRes({
+        token: "reset-token",
+        newPassword: "newpassword123",
+      });
+
+      const handler = getHandler("post", "/reset-password/confirm");
+      await handler!(req, res, next);
+
+      expect(resetPassword).toHaveBeenCalledWith(req.body);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true });
+    });
+
+    it("passes UnauthorizedError to next when token is invalid", async () => {
+      const err = new UnauthorizedError("Invalid or expired reset token");
+      vi.mocked(resetPassword).mockRejectedValueOnce(err);
+      const { req, res, next } = makeReqRes({ token: "bad-token", newPassword: "newpassword123" });
+
+      const handler = getHandler("post", "/reset-password/confirm");
       await handler!(req, res, next);
       await Promise.resolve(); // flush .catch(next) microtask
 
