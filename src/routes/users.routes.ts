@@ -42,7 +42,7 @@ router.patch(
   authorize("user:write"),
   validate(updateUserSchema),
   asyncHandler(async (req, res) => {
-    const user = await updateUser(req.params.id, req.body);
+    const user = await updateUser(req.params.id as string, req.body);
     sendSuccess(res, user);
   }),
 );
@@ -53,7 +53,7 @@ router.put(
   authorize("role:write"),
   validate(updateUserRolesSchema),
   asyncHandler(async (req, res) => {
-    await updateUserRoles(req.params.id, req.body);
+    await updateUserRoles(req.params.id as string, req.body);
     sendSuccess(res);
   }),
 );
