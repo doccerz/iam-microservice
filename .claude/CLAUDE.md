@@ -1,5 +1,7 @@
 # IAM Microservice (user-microservice-js)
 
+<!-- Detailed rules are split into focused files under .claude/rules/ -->
+
 @.claude/rules/project-overview.md
 @.claude/rules/coding-patterns.md
 @.claude/rules/testing-patterns.md

@@ -61,7 +61,6 @@ const mockDb = {
   insert: vi.fn().mockReturnThis(),
   values: vi.fn().mockReturnThis(),
   returning: vi.fn().mockResolvedValue([]),
-  delete: vi.fn().mockReturnThis(),
 };
 vi.mock("../../db/index.js", () => ({ db: mockDb }));
 ```
