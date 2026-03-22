@@ -95,7 +95,7 @@ package.json
 
 ### Phase 4: Account Lifecycle & Admin Routes
 - [x] Task 4.1: Change Password
-- [ ] Task 4.2: Reset Password
+- [x] Task 4.2: Reset Password
 - [ ] Task 4.3: Users Service & Routes
 
 ### Phase 5: Containerization
