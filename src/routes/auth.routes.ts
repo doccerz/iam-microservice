@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/async-handler.js";
-import { register, login } from "../services/auth.service.js";
-import { registerSchema, loginSchema } from "../validators/auth.validators.js";
+import { register, login, refresh } from "../services/auth.service.js";
+import { registerSchema, loginSchema, refreshSchema } from "../validators/auth.validators.js";
 import { sendSuccess } from "../utils/response.js";
 
 const router = Router();
@@ -21,6 +21,15 @@ router.post(
   validate(loginSchema),
   asyncHandler(async (req, res) => {
     const result = await login(req.body);
+    sendSuccess(res, result, 200);
+  }),
+);
+
+router.post(
+  "/refresh",
+  validate(refreshSchema),
+  asyncHandler(async (req, res) => {
+    const result = await refresh(req.body.token);
     sendSuccess(res, result, 200);
   }),
 );

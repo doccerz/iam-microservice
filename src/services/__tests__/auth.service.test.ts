@@ -13,7 +13,7 @@ vi.mock("../../config/env.js", () => ({
   },
 }));
 
-const { mockDb, mockWhere, mockReturning, mockTx } = vi.hoisted(() => {
+const { mockDb, mockWhere, mockReturning, mockTx, mockVerifyRefreshToken } = vi.hoisted(() => {
   const mockWhere = vi.fn();
   const mockReturning = vi.fn();
 
@@ -36,9 +36,12 @@ const { mockDb, mockWhere, mockReturning, mockTx } = vi.hoisted(() => {
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     returning: mockReturning,
+    delete: vi.fn().mockReturnThis(),
   };
 
-  return { mockDb, mockWhere, mockReturning, mockTx };
+  const mockVerifyRefreshToken = vi.fn();
+
+  return { mockDb, mockWhere, mockReturning, mockTx, mockVerifyRefreshToken };
 });
 
 vi.mock("../../db/index.js", () => ({ db: mockDb }));
@@ -51,9 +54,10 @@ vi.mock("../../utils/password.js", () => ({
 vi.mock("../../utils/jwt.js", () => ({
   signAccessToken: vi.fn(),
   signRefreshToken: vi.fn(),
+  verifyRefreshToken: mockVerifyRefreshToken,
 }));
 
-import { register, login, getUserPermissions } from "../auth.service.js";
+import { register, login, refresh, getUserPermissions } from "../auth.service.js";
 import { ConflictError, UnauthorizedError } from "../../utils/errors.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { signAccessToken, signRefreshToken } from "../../utils/jwt.js";
@@ -68,6 +72,14 @@ const MOCK_USER = {
 };
 
 const MOCK_ROLE = { id: "role-uuid", slug: "user", name: "User", createdAt: new Date() };
+
+const MOCK_STORED_TOKEN = {
+  id: "token-uuid",
+  userId: "user-uuid",
+  token: "old-refresh-token",
+  expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+  createdAt: new Date(),
+};
 
 describe("auth.service", () => {
   beforeEach(() => {
@@ -85,12 +97,14 @@ describe("auth.service", () => {
     mockDb.innerJoin.mockReturnThis();
     mockDb.insert.mockReturnThis();
     mockDb.values.mockReturnThis();
+    mockDb.delete.mockReturnThis();
 
     // Default utility implementations
     vi.mocked(hashPassword).mockResolvedValue("hashed-password");
     vi.mocked(verifyPassword).mockResolvedValue(true);
     vi.mocked(signAccessToken).mockReturnValue("access-token");
-    vi.mocked(signRefreshToken).mockReturnValue("refresh-token");
+    vi.mocked(signRefreshToken).mockReturnValue("new-refresh-token");
+    mockVerifyRefreshToken.mockReturnValue({ sub: "user-uuid" });
   });
 
   // --- getUserPermissions ---
@@ -178,7 +192,7 @@ describe("auth.service", () => {
 
       expect(result).toEqual({
         accessToken: "access-token",
-        refreshToken: "refresh-token",
+        refreshToken: "new-refresh-token",
         user: { id: "user-uuid", email: "test@example.com" },
       });
     });
@@ -218,7 +232,7 @@ describe("auth.service", () => {
       expect(mockDb.values).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: "user-uuid",
-          token: "refresh-token",
+          token: "new-refresh-token",
           expiresAt: expect.any(Date),
         }),
       );
@@ -244,6 +258,83 @@ describe("auth.service", () => {
       await login({ email: "test@example.com", password: "password123" });
 
       expect(signRefreshToken).toHaveBeenCalledWith({ sub: "user-uuid" });
+    });
+  });
+
+  // --- refresh ---
+
+  describe("refresh", () => {
+    it("returns new accessToken and refreshToken on success", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_STORED_TOKEN]); // look up token in DB
+      mockWhere.mockResolvedValueOnce([]); // delete where (resolves undefined)
+      mockWhere.mockResolvedValueOnce([MOCK_USER]); // find user
+      mockWhere.mockResolvedValueOnce([{ slug: "user:read" }]); // getUserPermissions
+
+      const result = await refresh("old-refresh-token");
+
+      expect(result).toEqual({
+        accessToken: "access-token",
+        refreshToken: "new-refresh-token",
+      });
+    });
+
+    it("throws UnauthorizedError when verifyRefreshToken fails", async () => {
+      mockVerifyRefreshToken.mockImplementationOnce(() => {
+        throw new UnauthorizedError("Invalid or expired refresh token");
+      });
+
+      await expect(refresh("bad-token")).rejects.toThrow(UnauthorizedError);
+    });
+
+    it("throws UnauthorizedError when token not found in DB", async () => {
+      mockWhere.mockResolvedValueOnce([]); // token not in DB
+
+      await expect(refresh("old-refresh-token")).rejects.toThrow(UnauthorizedError);
+    });
+
+    it("throws UnauthorizedError when token is expired", async () => {
+      mockWhere.mockResolvedValueOnce([
+        { ...MOCK_STORED_TOKEN, expiresAt: new Date(Date.now() - 1000) }, // expired
+      ]);
+
+      await expect(refresh("old-refresh-token")).rejects.toThrow(UnauthorizedError);
+    });
+
+    it("throws UnauthorizedError when user is inactive", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_STORED_TOKEN]); // look up token
+      mockWhere.mockResolvedValueOnce([]); // delete
+      mockWhere.mockResolvedValueOnce([{ ...MOCK_USER, isActive: false }]); // user inactive
+
+      await expect(refresh("old-refresh-token")).rejects.toThrow(UnauthorizedError);
+    });
+
+    it("deletes old token before issuing new one", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_STORED_TOKEN]);
+      mockWhere.mockResolvedValueOnce([]);
+      mockWhere.mockResolvedValueOnce([MOCK_USER]);
+      mockWhere.mockResolvedValueOnce([{ slug: "user:read" }]);
+
+      await refresh("old-refresh-token");
+
+      expect(mockDb.delete).toHaveBeenCalled();
+    });
+
+    it("stores new refresh token in DB", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_STORED_TOKEN]);
+      mockWhere.mockResolvedValueOnce([]);
+      mockWhere.mockResolvedValueOnce([MOCK_USER]);
+      mockWhere.mockResolvedValueOnce([{ slug: "user:read" }]);
+
+      await refresh("old-refresh-token");
+
+      expect(mockDb.insert).toHaveBeenCalled();
+      expect(mockDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user-uuid",
+          token: "new-refresh-token",
+          expiresAt: expect.any(Date),
+        }),
+      );
     });
   });
 });
