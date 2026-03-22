@@ -69,7 +69,7 @@ type RouteLayer = {
 
 function getHandler(method: "post" | "get" | "patch" | "put", path: string) {
   const layer = (usersRouter as unknown as { stack: RouteLayer[] }).stack.find(
-    (l) => l.route?.path === path,
+    (l) => l.route?.path === path && l.route.stack.some((s) => s.method === method),
   );
   const handlers = layer?.route.stack.filter((s) => s.method === method);
   return handlers?.[handlers.length - 1]?.handle;
