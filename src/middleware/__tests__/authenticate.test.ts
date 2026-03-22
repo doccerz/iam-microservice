@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 
-const mockVerifyAccessToken = vi.fn();
+const { mockVerifyAccessToken } = vi.hoisted(() => ({
+  mockVerifyAccessToken: vi.fn(),
+}));
 
 vi.mock("../../config/env.js", () => ({
   env: {
@@ -16,9 +18,10 @@ vi.mock("../../config/env.js", () => ({
   },
 }));
 
-vi.mock("../../utils/jwt.js", () => ({
-  verifyAccessToken: mockVerifyAccessToken,
-}));
+vi.mock("../../utils/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../utils/index.js")>();
+  return { ...actual, verifyAccessToken: mockVerifyAccessToken };
+});
 
 import { authenticate } from "../authenticate.js";
 import { UnauthorizedError } from "../../utils/errors.js";
