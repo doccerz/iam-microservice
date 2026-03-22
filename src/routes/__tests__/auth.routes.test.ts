@@ -42,13 +42,20 @@ function makeReqRes(body: unknown) {
   return { req, res, next };
 }
 
-// Extract route handlers from the router
+type RouteLayer = {
+  route: {
+    path: string;
+    stack: { method: string; handle: (req: Request, res: Response, next: NextFunction) => void }[];
+  };
+};
+
+// Extract the last route handler (skipping middleware like validate)
 function getHandler(method: "post", path: string) {
-  const layer = (authRouter as unknown as { stack: { route: { path: string; stack: { method: string; handle: (req: Request, res: Response, next: NextFunction) => void }[] } } }[]).stack.find(
+  const layer = (authRouter as unknown as RouteLayer[]).stack.find(
     (l) => l.route?.path === path,
   );
-  const handler = layer?.route.stack.find((s) => s.method === method);
-  return handler?.handle;
+  const handlers = layer?.route.stack.filter((s) => s.method === method);
+  return handlers?.[handlers.length - 1]?.handle;
 }
 
 describe("auth.routes", () => {
@@ -76,6 +83,7 @@ describe("auth.routes", () => {
 
       const handler = getHandler("post", "/register");
       await handler!(req, res, next);
+      await Promise.resolve(); // flush .catch(next) microtask
 
       expect(next).toHaveBeenCalledWith(err);
     });
@@ -101,6 +109,7 @@ describe("auth.routes", () => {
 
       const handler = getHandler("post", "/login");
       await handler!(req, res, next);
+      await Promise.resolve(); // flush .catch(next) microtask
 
       expect(next).toHaveBeenCalledWith(err);
     });
