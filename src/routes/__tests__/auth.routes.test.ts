@@ -18,12 +18,13 @@ vi.mock("../../services/auth.service.js", () => ({
   register: vi.fn(),
   login: vi.fn(),
   refresh: vi.fn(),
+  changePassword: vi.fn(),
 }));
 
 vi.mock("../../db/index.js", () => ({ db: {} }));
 
 import authRouter from "../auth.routes.js";
-import { register, login, refresh } from "../../services/auth.service.js";
+import { register, login, refresh, changePassword } from "../../services/auth.service.js";
 import { ConflictError, UnauthorizedError } from "../../utils/errors.js";
 
 const MOCK_USER = { id: "user-uuid", email: "test@example.com", createdAt: new Date() };
@@ -139,6 +140,48 @@ describe("auth.routes", () => {
       const { req, res, next } = makeReqRes({ token: "bad-token" });
 
       const handler = getHandler("post", "/refresh");
+      await handler!(req, res, next);
+      await Promise.resolve(); // flush .catch(next) microtask
+
+      expect(next).toHaveBeenCalledWith(err);
+    });
+  });
+
+  describe("POST /change-password", () => {
+    it("calls changePassword with userId from req.user and responds 200 on success", async () => {
+      vi.mocked(changePassword).mockResolvedValueOnce(undefined);
+      const { req, res, next } = makeReqRes({
+        oldPassword: "password123",
+        newPassword: "newpassword123",
+      });
+      (req as Request & { user: unknown }).user = {
+        sub: "user-uuid",
+        email: "test@example.com",
+        permissions: [],
+      };
+
+      const handler = getHandler("post", "/change-password");
+      await handler!(req, res, next);
+
+      expect(changePassword).toHaveBeenCalledWith("user-uuid", req.body);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true });
+    });
+
+    it("passes error to next when changePassword throws", async () => {
+      const err = new UnauthorizedError("Invalid credentials");
+      vi.mocked(changePassword).mockRejectedValueOnce(err);
+      const { req, res, next } = makeReqRes({
+        oldPassword: "wrong",
+        newPassword: "newpassword123",
+      });
+      (req as Request & { user: unknown }).user = {
+        sub: "user-uuid",
+        email: "test@example.com",
+        permissions: [],
+      };
+
+      const handler = getHandler("post", "/change-password");
       await handler!(req, res, next);
       await Promise.resolve(); // flush .catch(next) microtask
 

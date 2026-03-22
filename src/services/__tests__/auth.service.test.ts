@@ -25,6 +25,9 @@ const { mockDb, mockWhere, mockReturning, mockTx, mockVerifyRefreshToken } = vi.
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     returning: mockReturning,
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
   };
 
   const mockDb = {
@@ -57,8 +60,8 @@ vi.mock("../../utils/jwt.js", () => ({
   verifyRefreshToken: mockVerifyRefreshToken,
 }));
 
-import { register, login, refresh, getUserPermissions } from "../auth.service.js";
-import { ConflictError, UnauthorizedError } from "../../utils/errors.js";
+import { register, login, refresh, getUserPermissions, changePassword } from "../auth.service.js";
+import { ConflictError, UnauthorizedError, NotFoundError } from "../../utils/errors.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { signAccessToken, signRefreshToken } from "../../utils/jwt.js";
 
@@ -98,6 +101,10 @@ describe("auth.service", () => {
     mockDb.insert.mockReturnThis();
     mockDb.values.mockReturnThis();
     mockDb.delete.mockReturnThis();
+
+    mockTx.update.mockReturnThis();
+    mockTx.set.mockReturnThis();
+    mockTx.delete.mockReturnThis();
 
     // Default utility implementations
     vi.mocked(hashPassword).mockResolvedValue("hashed-password");
@@ -335,6 +342,50 @@ describe("auth.service", () => {
           expiresAt: expect.any(Date),
         }),
       );
+    });
+  });
+
+  // --- changePassword ---
+
+  describe("changePassword", () => {
+    beforeEach(() => {
+      mockDb.transaction.mockImplementation(
+        async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx),
+      );
+    });
+
+    it("updates password hash and revokes all refresh tokens on success", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_USER]); // find user
+      vi.mocked(hashPassword).mockResolvedValueOnce("new-hashed-password");
+      mockWhere.mockResolvedValueOnce(undefined); // tx.update.set.where
+      mockWhere.mockResolvedValueOnce(undefined); // tx.delete.where
+
+      await changePassword("user-uuid", {
+        oldPassword: "password123",
+        newPassword: "newpassword123",
+      });
+
+      expect(verifyPassword).toHaveBeenCalledWith("password123", "hashed-password");
+      expect(hashPassword).toHaveBeenCalledWith("newpassword123");
+      expect(mockTx.update).toHaveBeenCalled();
+      expect(mockTx.delete).toHaveBeenCalled();
+    });
+
+    it("throws NotFoundError when user not found", async () => {
+      mockWhere.mockResolvedValueOnce([]);
+
+      await expect(
+        changePassword("user-uuid", { oldPassword: "password123", newPassword: "newpassword123" }),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it("throws UnauthorizedError when old password is wrong", async () => {
+      mockWhere.mockResolvedValueOnce([MOCK_USER]);
+      vi.mocked(verifyPassword).mockResolvedValueOnce(false);
+
+      await expect(
+        changePassword("user-uuid", { oldPassword: "wrong", newPassword: "newpassword123" }),
+      ).rejects.toThrow(UnauthorizedError);
     });
   });
 });
