@@ -19,7 +19,10 @@
       "Bash(npm test:*)",
       "Bash(./node_modules/.bin/vitest run:*)",
       "Bash(npm test:*)",
-      "Skill(commit-commands:commit-push-pr)"
+      "Skill(commit-commands:commit-push-pr)",
+      "Bash(find /home/babin/code/user-microservice-js -name *.test.ts -o -name *.spec.ts)",
+      "Bash(git rm:*)",
+      "Bash(git stash:*)"
     ]
   }
 }

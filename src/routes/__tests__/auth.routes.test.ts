@@ -17,12 +17,13 @@ vi.mock("../../config/env.js", () => ({
 vi.mock("../../services/auth.service.js", () => ({
   register: vi.fn(),
   login: vi.fn(),
+  refresh: vi.fn(),
 }));
 
 vi.mock("../../db/index.js", () => ({ db: {} }));
 
 import authRouter from "../auth.routes.js";
-import { register, login } from "../../services/auth.service.js";
+import { register, login, refresh } from "../../services/auth.service.js";
 import { ConflictError, UnauthorizedError } from "../../utils/errors.js";
 
 const MOCK_USER = { id: "user-uuid", email: "test@example.com", createdAt: new Date() };
@@ -30,6 +31,10 @@ const MOCK_LOGIN_RESULT = {
   accessToken: "access-token",
   refreshToken: "refresh-token",
   user: { id: "user-uuid", email: "test@example.com" },
+};
+const MOCK_REFRESH_RESULT = {
+  accessToken: "new-access-token",
+  refreshToken: "new-refresh-token",
 };
 
 function makeReqRes(body: unknown) {
@@ -108,6 +113,32 @@ describe("auth.routes", () => {
       const { req, res, next } = makeReqRes({ email: "test@example.com", password: "wrong" });
 
       const handler = getHandler("post", "/login");
+      await handler!(req, res, next);
+      await Promise.resolve(); // flush .catch(next) microtask
+
+      expect(next).toHaveBeenCalledWith(err);
+    });
+  });
+
+  describe("POST /refresh", () => {
+    it("calls refresh with req.body.token and responds 200 on success", async () => {
+      vi.mocked(refresh).mockResolvedValueOnce(MOCK_REFRESH_RESULT);
+      const { req, res, next } = makeReqRes({ token: "old-refresh-token" });
+
+      const handler = getHandler("post", "/refresh");
+      await handler!(req, res, next);
+
+      expect(refresh).toHaveBeenCalledWith("old-refresh-token");
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: MOCK_REFRESH_RESULT });
+    });
+
+    it("passes UnauthorizedError to next on invalid token", async () => {
+      const err = new UnauthorizedError("Invalid or expired refresh token");
+      vi.mocked(refresh).mockRejectedValueOnce(err);
+      const { req, res, next } = makeReqRes({ token: "bad-token" });
+
+      const handler = getHandler("post", "/refresh");
       await handler!(req, res, next);
       await Promise.resolve(); // flush .catch(next) microtask
 
