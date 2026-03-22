@@ -1,0 +1,582 @@
+ ▐▛███▜▌   Claude Code v2.1.81
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    ~/code/user-microservice-js
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯ /plan @specs/v1/implementation-plan.md  task 4.1                              
+  ⎿  Enabled plan mode
+
+  Read 1 file (ctrl+o to expand)
+
+● Let me explore the existing auth service and related patterns to plan Task
+  4.1.
+
+● Explore(Explore auth service and related patterns)
+  ⎿  Done (15 tool uses · 37.2k tokens · 30s)
+  (ctrl+o to expand)
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/tingly-wobbling-clarke.md · /plan to edit
+     Task 4.1: Change Password (POST /auth/change-password)
+
+     Context
+
+     Task 4.1 implements the change-password endpoint. It's an authenticated
+     route that verifies the user's old password, hashes the new one, updates
+     the DB, and deletes all refresh tokens for that user (security
+     kill-switch). The changePasswordSchema and ChangePasswordInput type already
+      exist in src/validators/auth.validators.ts.
+
+     ---
+     Files to Modify
+
+     ┌─────────────────────────────────────────────┬────────────────────────────
+     ┐
+     │                    File                     │           Change
+     │
+     ├─────────────────────────────────────────────┼────────────────────────────
+     ┤
+     │ src/services/auth.service.ts                │ Add changePassword(userId, 
+     │
+     │                                             │  data) function
+     │
+     ├─────────────────────────────────────────────┼────────────────────────────
+     ┤
+     │                                             │ Add POST                   
+     │
+     │ src/routes/auth.routes.ts                   │ /auth/change-password
+     │
+     │                                             │ route
+     │
+     ├─────────────────────────────────────────────┼────────────────────────────
+     ┤
+     │ src/services/__tests__/auth.service.test.ts │ Add tests for
+     │
+     │                                             │ changePassword
+     │
+     ├─────────────────────────────────────────────┼────────────────────────────
+     ┤
+     │ src/routes/__tests__/auth.routes.test.ts    │ Add tests for the new
+     │
+     │                                             │ route
+     │
+     ├─────────────────────────────────────────────┼────────────────────────────
+     ┤
+     │ specs/v1/implementation-plan.md             │ Mark task [x]
+     │
+     └─────────────────────────────────────────────┴────────────────────────────
+     ┘
+
+     ---
+     Implementation Steps
+
+     Step 1 — Write failing tests (commit before implementation)
+
+     Service test (src/services/__tests__/auth.service.test.ts)
+
+     Add a describe("changePassword") block:
+     - Success: mock user found, verifyPassword returns true, hashPassword
+     returns new hash → expect db.update called with new hash and
+     db.delete(refreshTokens).where(userId) called
+     - User not found: mockWhere returns [] → expect NotFoundError thrown
+     - Wrong old password: verifyPassword returns false → expect
+     UnauthorizedError("Invalid credentials") thrown
+
+     Route test (src/routes/__tests__/auth.routes.test.ts)
+
+     Add tests for POST /auth/change-password:
+     - Use getHandler("post", "/change-password") — last handler (skips
+     authenticate + validate)
+     - Mock req.user = { sub: "user-id", email: "test@example.com", permissions:
+      [] }
+     - Success: mock changePassword resolves → expect res.json called with { 
+     success: true }
+     - Service throws: mock rejects → next called with the error
+
+     Step 2 — Implement changePassword in auth service
+
+     export async function changePassword(
+       userId: string,
+       data: ChangePasswordInput,
+     ): Promise<void> {
+       const [user] = await db.select().from(users).where(eq(users.id, userId));
+       if (!user) throw new NotFoundError("User not found");
+
+       const valid = await verifyPassword(data.oldPassword, user.passwordHash);
+       if (!valid) throw new UnauthorizedError("Invalid credentials");
+
+       const newHash = await hashPassword(data.newPassword);
+
+       await db.transaction(async (tx) => {
+         await tx.update(users)
+           .set({ passwordHash: newHash, updatedAt: new Date() })
+           .where(eq(users.id, userId));
+         await tx.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+       });
+     }
+
+     Step 3 — Add route in src/routes/auth.routes.ts
+
+     router.post(
+       "/change-password",
+       authenticate,
+       validate(changePasswordSchema),
+       asyncHandler(async (req, res) => {
+         await changePassword(req.user!.sub, req.body);
+         sendSuccess(res);
+       }),
+     );
+
+     ---
+     Reused Utilities
+
+     - verifyPassword / hashPassword — src/utils/password.ts
+     - authenticate — src/middleware/authenticate.ts
+     - validate — src/middleware/validate.ts
+     - asyncHandler — src/utils/async-handler.ts
+     - sendSuccess — src/utils/response.ts
+     - UnauthorizedError, NotFoundError — src/utils/errors.ts
+     - changePasswordSchema — already in src/validators/auth.validators.ts
+
+     ---
+     Git Commits (in order)
+
+     1. test(task-4.1): add failing tests for changePassword service and route
+     2. feat(task-4.1): implement change-password endpoint
+     3. docs(task-4.1): mark task complete in implementation plan
+
+     ---
+     Verification
+
+     npm run test -- auth.service auth.routes
+     All tests should pass. Manual check: POST /auth/change-password with valid
+     Bearer token + correct old password → 200; old refresh tokens for that user
+      deleted from DB.
+
+● Now let me execute the plan following the git workflow.
+
+● Bash(git checkout main && git pull)
+  ⎿  Already on 'main'
+     M  .claude/rules/git-workflow.md
+     M  specs/v1/implementation-plan.md
+     … +2 lines (ctrl+o to expand)
+
+● Bash(git checkout -b feat/task-4.1-change-password)
+  ⎿  Switched to a new branch 'feat/task-4.1-change-password'
+
+● Now let me read the existing test files before writing new tests.
+
+  Read 2 files (ctrl+o to expand)
+
+● Now let me read the auth service and routes to understand the current
+  implementation.
+
+  Read 2 files (ctrl+o to expand)
+
+● Let me check the validators file to confirm the existing schema.
+
+  Read 1 file (ctrl+o to expand)
+
+● Now I have all the context I need. Let me write the failing tests first.
+
+● Update(src/services/__tests__/auth.service.test.ts)
+  ⎿  Added 3 lines
+      25      insert: vi.fn().mockReturnThis(),
+      26      values: vi.fn().mockReturnThis(),
+      27      returning: mockReturning,
+      28 +    update: vi.fn().mockReturnThis(),                          
+      29 +    set: vi.fn().mockReturnThis(),                             
+      30 +    delete: vi.fn().mockReturnThis(),                          
+      31    };
+      32  
+      33    const mockDb = {
+
+● Update(src/services/__tests__/auth.service.test.ts)
+  ⎿  Added 4 lines
+      102      mockDb.values.mockReturnThis();
+      103      mockDb.delete.mockReturnThis();
+      104  
+      105 +    mockTx.update.mockReturnThis();                           
+      106 +    mockTx.set.mockReturnThis();                              
+      107 +    mockTx.delete.mockReturnThis();                           
+      108 +                                                              
+      109      // Default utility implementations
+      110      vi.mocked(hashPassword).mockResolvedValue("hashed-password
+           ");
+      111      vi.mocked(verifyPassword).mockResolvedValue(true);
+
+● Update(src/services/__tests__/auth.service.test.ts)  ⎿  Added 2 lines, removed 2 lines
+      60    verifyRefreshToken: mockVerifyRefreshToken,
+      61  }));
+      62  
+      63 -import { register, login, refresh, getUserPermissions } from ".
+         -./auth.service.js";                                            
+      64 -import { ConflictError, UnauthorizedError } from "../../utils/e
+         -rrors.js";                                                     
+      63 +import { register, login, refresh, getUserPermissions, changePa
+         +ssword } from "../auth.service.js";                            
+      64 +import { ConflictError, UnauthorizedError, NotFoundError } from
+         + "../../utils/errors.js";                                      
+      65  import { hashPassword, verifyPassword } from "../../utils/passw
+          ord.js";
+      66  import { signAccessToken, signRefreshToken } from "../../utils/
+          jwt.js";
+      67  
+
+● Now add the changePassword describe block at the end of the test file:
+
+● Update(src/services/__tests__/auth.service.test.ts)
+  ⎿  Added 44 lines
+      344        );
+      345      });
+      346    });
+      347 +                                                              
+      348 +  // --- changePassword ---                                   
+      349 +                                                              
+      350 +  describe("changePassword", () => {                          
+      351 +    beforeEach(() => {                                        
+      352 +      mockDb.transaction.mockImplementation(                  
+      353 +        async (cb: (tx: typeof mockTx) => Promise<unknown>) =>
+          + cb(mockTx),                                                  
+      354 +      );                                                      
+      355 +    });                                                       
+      356 +                                                              
+      357 +    it("updates password hash and revokes all refresh tokens o
+          +n success", async () => {                                     
+      358 +      mockWhere.mockResolvedValueOnce([MOCK_USER]); // find us
+          +er                                                            
+      359 +      vi.mocked(hashPassword).mockResolvedValueOnce("new-hashe
+          +d-password");                                                 
+      360 +      mockWhere.mockResolvedValueOnce(undefined); // tx.update
+          +.set.where                                                    
+      361 +      mockWhere.mockResolvedValueOnce(undefined); // tx.delete
+          +.where                                                        
+      362 +                                                              
+      363 +      await changePassword("user-uuid", {                     
+      364 +        oldPassword: "password123",                           
+      365 +        newPassword: "newpassword123",                        
+      366 +      });                                                     
+      367 +                                                              
+      368 +      expect(verifyPassword).toHaveBeenCalledWith("password123
+          +", "hashed-password");                                        
+      369 +      expect(hashPassword).toHaveBeenCalledWith("newpassword12
+          +3");                                                          
+      370 +      expect(mockTx.update).toHaveBeenCalled();               
+      371 +      expect(mockTx.delete).toHaveBeenCalled();               
+      372 +    });                                                       
+      373 +                                                              
+      374 +    it("throws NotFoundError when user not found", async () =>
+          + {                                                            
+      375 +      mockWhere.mockResolvedValueOnce([]);                    
+      376 +                                                              
+      377 +      await expect(                                           
+      378 +        changePassword("user-uuid", { oldPassword: "password12
+          +3", newPassword: "newpassword123" }),                         
+      379 +      ).rejects.toThrow(NotFoundError);                       
+      380 +    });                                                       
+      381 +                                                              
+      382 +    it("throws UnauthorizedError when old password is wrong", 
+          +async () => {                                                 
+      383 +      mockWhere.mockResolvedValueOnce([MOCK_USER]);           
+      384 +      vi.mocked(verifyPassword).mockResolvedValueOnce(false); 
+      385 +                                                              
+      386 +      await expect(                                           
+      387 +        changePassword("user-uuid", { oldPassword: "wrong", ne
+          +wPassword: "newpassword123" }),                               
+      388 +      ).rejects.toThrow(UnauthorizedError);                   
+      389 +    });                                                       
+      390 +  });                                                         
+      391  });
+
+● Now update the route test file:
+
+● Update(src/routes/__tests__/auth.routes.test.ts)
+  ⎿  Added 1 line
+      18    register: vi.fn(),
+      19    login: vi.fn(),
+      20    refresh: vi.fn(),
+      21 +  changePassword: vi.fn(),                                     
+      22  }));
+      23  
+      24  vi.mock("../../db/index.js", () => ({ db: {} }));
+
+● Update(src/routes/__tests__/auth.routes.test.ts)
+  ⎿  Added 1 line, removed 1 line
+      24  vi.mock("../../db/index.js", () => ({ db: {} }));
+      25  
+      26  import authRouter from "../auth.routes.js";
+      27 -import { register, login, refresh } from "../../services/auth.s
+         -ervice.js";                                                    
+      27 +import { register, login, refresh, changePassword } from "../..
+         +/services/auth.service.js";                                    
+      28  import { ConflictError, UnauthorizedError } from "../../utils/e
+          rrors.js";
+      29  
+      30  const MOCK_USER = { id: "user-uuid", email: "test@example.com",
+           createdAt: new Date() };
+
+● Update(src/routes/__tests__/auth.routes.test.ts)
+  ⎿  Added 42 lines
+      146        expect(next).toHaveBeenCalledWith(err);
+      147      });
+      148    });
+      149 +                                                              
+      150 +  describe("POST /change-password", () => {                   
+      151 +    it("calls changePassword with userId from req.user and res
+          +ponds 200 on success", async () => {                          
+      152 +      vi.mocked(changePassword).mockResolvedValueOnce(undefine
+          +d);                                                           
+      153 +      const { req, res, next } = makeReqRes({                 
+      154 +        oldPassword: "password123",                           
+      155 +        newPassword: "newpassword123",                        
+      156 +      });                                                     
+      157 +      (req as Request & { user: unknown }).user = {           
+      158 +        sub: "user-uuid",                                     
+      159 +        email: "test@example.com",                            
+      160 +        permissions: [],                                      
+      161 +      };                                                      
+      162 +                                                              
+      163 +      const handler = getHandler("post", "/change-password"); 
+      164 +      await handler!(req, res, next);                         
+      165 +                                                              
+      166 +      expect(changePassword).toHaveBeenCalledWith("user-uuid",
+          + req.body);                                                   
+      167 +      expect(res.status).toHaveBeenCalledWith(200);           
+      168 +      expect(res.json).toHaveBeenCalledWith({ success: true })
+          +;                                                             
+      169 +    });                                                       
+      170 +                                                              
+      171 +    it("passes error to next when changePassword throws", asyn
+          +c () => {                                                     
+      172 +      const err = new UnauthorizedError("Invalid credentials")
+          +;                                                             
+      173 +      vi.mocked(changePassword).mockRejectedValueOnce(err);   
+      174 +      const { req, res, next } = makeReqRes({                 
+      175 +        oldPassword: "wrong",                                 
+      176 +        newPassword: "newpassword123",                        
+      177 +      });                                                     
+      178 +      (req as Request & { user: unknown }).user = {           
+      179 +        sub: "user-uuid",                                     
+      180 +        email: "test@example.com",                            
+      181 +        permissions: [],                                      
+      182 +      };                                                      
+      183 +                                                              
+      184 +      const handler = getHandler("post", "/change-password"); 
+      185 +      await handler!(req, res, next);                         
+      186 +      await Promise.resolve(); // flush .catch(next) microtask
+      187 +                                                              
+      188 +      expect(next).toHaveBeenCalledWith(err);                 
+      189 +    });                                                       
+      190 +  });                                                         
+      191  });
+
+● Now let me verify the tests fail (since implementation doesn't exist yet):
+
+● Bash(npm test -- --reporter=verbose 2>&1 | tail -40)
+  ⎿   ❯ src/services/__tests__/auth.service.test.ts:363:13
+         361|       mockWhere.mockResolvedValueOnce(undefined); // tx.delet
+     e.where
+     … +32 lines (ctrl+o to expand)
+
+● 5 tests failing as expected. Now commit the failing tests:
+
+● Bash(git add src/services/__tests__/auth.service.test.ts
+      src/routes/__tests__/auth.routes.test.ts && git commit -m "$(cat <<'EOF'
+      test(task-4.1): add failing tests f…)
+  ⎿  [feat/task-4.1-change-password 3111aba] test(task-4.1): add failing te
+     sts for changePassword service and route
+      2 files changed, 97 insertions(+), 3 deletions(-)
+
+● Now implement the changePassword service function:
+
+● Update(src/services/auth.service.ts)
+  ⎿  Added 2 lines, removed 2 lines
+      12  import { env } from "../config/env.js";
+      13  import { hashPassword, verifyPassword } from "../utils/password
+          .js";
+      14  import { signAccessToken, signRefreshToken, verifyRefreshToken 
+          } from "../utils/jwt.js";
+      15 -import { ConflictError, UnauthorizedError } from "../utils/erro
+         -rs.js";                                                        
+      16 -import type { RegisterInput, LoginInput } from "../validators/a
+         -uth.validators.js";                                            
+      15 +import { ConflictError, UnauthorizedError, NotFoundError } from
+         + "../utils/errors.js";                                         
+      16 +import type { RegisterInput, LoginInput, ChangePasswordInput } 
+         +from "../validators/auth.validators.js";                       
+      17  
+      18  function parseExpiry(expiry: string): number {
+      19    const unit = expiry.slice(-1);
+
+● Update(src/services/auth.service.ts)
+  ⎿  Added 18 lines
+      121  
+      122    return { accessToken, refreshToken: newRefreshToken };
+      123  }
+      124 +                                                              
+      125 +export async function changePassword(userId: string, data: Cha
+          +ngePasswordInput): Promise<void> {                            
+      126 +  const [user] = await db.select().from(users).where(eq(users.
+          +id, userId));                                                 
+      127 +  if (!user) throw new NotFoundError("User not found");       
+      128 +                                                              
+      129 +  const isValid = await verifyPassword(data.oldPassword, user.
+          +passwordHash);                                                
+      130 +  if (!isValid) throw new UnauthorizedError("Invalid credentia
+          +ls");                                                         
+      131 +                                                              
+      132 +  const newHash = await hashPassword(data.newPassword);       
+      133 +                                                              
+      134 +  await db.transaction(async (tx) => {                        
+      135 +    await tx                                                  
+      136 +      .update(users)                                          
+      137 +      .set({ passwordHash: newHash, updatedAt: new Date() })  
+      138 +      .where(eq(users.id, userId));                           
+      139 +    await tx.delete(refreshTokens).where(eq(refreshTokens.user
+          +Id, userId));                                                 
+      140 +  });                                                         
+      141 +}                                                             
+
+● Now add the route:
+
+● Update(src/routes/auth.routes.ts)
+  ⎿  Added 8 lines, removed 2 lines
+       1  import { Router } from "express";
+       2  import { validate } from "../middleware/validate.js";
+       3  import { asyncHandler } from "../utils/async-handler.js";
+       4 -import { register, login, refresh } from "../services/auth.serv
+         -ice.js";                                                       
+       5 -import { registerSchema, loginSchema, refreshSchema } from "../
+         -validators/auth.validators.js";                                
+       4 +import { authenticate } from "../middleware/authenticate.js";  
+       5 +import { register, login, refresh, changePassword } from "../se
+         +rvices/auth.service.js";                                       
+       6 +import {                                                       
+       7 +  registerSchema,                                              
+       8 +  loginSchema,                                                 
+       9 +  refreshSchema,                                               
+      10 +  changePasswordSchema,                                        
+      11 +} from "../validators/auth.validators.js";                     
+      12  import { sendSuccess } from "../utils/response.js";
+      13  
+      14  const router = Router();
+
+● Update(src/routes/auth.routes.ts)
+  ⎿  Added 10 lines
+      40    }),
+      41  );
+      42  
+      43 +router.post(                                                   
+      44 +  "/change-password",                                          
+      45 +  authenticate,                                                
+      46 +  validate(changePasswordSchema),                              
+      47 +  asyncHandler(async (req, res) => {                           
+      48 +    await changePassword(req.user!.sub, req.body);             
+      49 +    sendSuccess(res);                                          
+      50 +  }),                                                          
+      51 +);                                                             
+      52 +                                                               
+      53  export default router;
+
+● Now run the tests:
+
+● Bash(npm test -- --reporter=verbose 2>&1 | tail -40)
+  ⎿  stdout | src/db/__tests__/seed.test.ts > db/seed.ts — seedDatabase() >
+      propagates errors from insert
+     Seeding database...
+     … +81 lines (ctrl+o to expand)
+
+● All 147 tests pass. Commit the implementation:
+
+● Bash(git add src/services/auth.service.ts src/routes/auth.routes.ts && git
+      commit -m "$(cat <<'EOF'
+      feat(task-4.1): implement change-password endpoint…)
+  ⎿  [feat/task-4.1-change-password 569f73d] feat(task-4.1): implement chan
+     ge-password endpoint
+      2 files changed, 38 insertions(+), 4 deletions(-)
+
+● Mark the task done in the implementation plan:
+
+● Update(specs/v1/implementation-plan.md)
+  ⎿  Added 1 line, removed 1 line
+       94  - [x] Task 3.2: Permission Guard
+       95  
+       96  ### Phase 4: Account Lifecycle & Admin Routes
+       97 -- [ ] Task 4.1: Change Password                               
+       97 +- [x] Task 4.1: Change Password                               
+       98  - [ ] Task 4.2: Reset Password
+       99  - [ ] Task 4.3: Users Service & Routes
+      100  
+
+● Bash(git add specs/v1/implementation-plan.md .claude/rules/git-workflow.md &&
+      git commit -m "$(cat <<'EOF'
+      docs(task-4.1): mark task complete in implementation plan…)
+  ⎿  [feat/task-4.1-change-password 6aad0f4] docs(task-4.1): mark task comp
+     lete in implementation plan
+      2 files changed, 4 insertions(+), 3 deletions(-)
+
+● Skill(commit-commands:commit-push-pr)
+  ⎿  Successfully loaded skill · 6 tools allowed
+● Bash(git push -u origin feat/task-4.1-change-password)
+  ⎿  remote:
+     remote: Create a pull request for 'feat/task-4.1-change-password' on G
+     itHub by visiting:
+     … +8 lines (ctrl+o to expand)
+
+● Bash(gh pr create --title "feat(task-4.1): change password endpoint" --body
+      "$(cat <<'EOF'
+      ## Summary…)
+  ⎿  https://github.com/doccerz/user-microservice-js/pull/14
+
+● PR created: https://github.com/doccerz/user-microservice-js/pull/14
+
+  Here's a summary of what was done for Task 4.1:
+
+  Implementation:
+  - changePassword(userId, data) in src/services/auth.service.ts — fetches user,
+   verifies old password, hashes new password, then runs a transaction to update
+   the hash and delete all refresh tokens for that user
+  - POST /auth/change-password in src/routes/auth.routes.ts — protected with
+  authenticate + validate(changePasswordSchema)
+
+  Tests (5 new):
+  - Service: success path, NotFoundError when user missing, UnauthorizedError on
+   wrong old password
+  - Route: correct service invocation + 200 response, error forwarded to next
+
+  All 147 tests pass.
+
+✻ Worked for 4m 45s
+
+❯ save plan: @specs/v1/20260322/4.1/                                            
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(mkdir -p /home/babin/code/user-microservice-js/specs/v1/20260322/4.1)
+  ⎿  Done
+
+● Write(specs/v1/20260322/4.1/plan.md)
+  ⎿  Wrote 99 lines to specs/v1/20260322/4.1/plan.md
+       1 # Task 4.1: Change Password (`POST /auth/change-password`)
+       2 
+       3 ## Context
+       4 Task 4.1 implements the change-password endpoint. It's an authen
+         ticated route that verifies the user's old password, hashes the 
+         new one, updates the DB, and deletes **all** refresh tokens for 
+         that user (security kill-switch). The `changePasswordSchema` and
+          `ChangePasswordInput` type already exist in `src/validators/aut
+         h.validators.ts`.
+       5 
+       6 ---
+       7 
+       8 ## Files to Modify
+       9 
+      10 | File | Change |
+     … +89 lines (ctrl+o to expand)
+
+● Saved to specs/v1/20260322/4.1/plan.md.
