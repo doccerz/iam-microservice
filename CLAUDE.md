@@ -112,8 +112,8 @@ graph TD
     B --> C[Execute plan]
     C --> D[Git commit]
     D --> E[Pass the tests]
-    E --> F[Git commit]
-    F --> G[Mark task done in implementation-plan.md + commit]
+    E --> F[Mark task done in implementation-plan.md]
+    F --> G[Git commit]
     G --> H[Push]
     H --> I[Create PR to main]
 ```
