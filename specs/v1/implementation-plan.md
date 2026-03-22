@@ -83,7 +83,7 @@ package.json
 - [x] Task 1.4: Seed Script
 
 ### Phase 2: Authentication Core
-- [ ] Task 2.1: Utilities (password, jwt, response, errors, async-handler)
+- [x] Task 2.1: Utilities (password, jwt, response, errors, async-handler)
 - [ ] Task 2.2: Validation Schemas (validate middleware, auth validators)
 - [ ] Task 2.3: Auth Service (register, login)
 - [ ] Task 2.4: Auth Routes + App Setup
