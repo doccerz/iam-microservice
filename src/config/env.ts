@@ -9,6 +9,7 @@ function required(key: string): string {
 }
 
 export const env = {
+  DATABASE_SCHEMA: required("DATABASE_SCHEMA"),
   DATABASE_URL: required("DATABASE_URL"),
   JWT_ACCESS_SECRET: required("JWT_ACCESS_SECRET"),
   JWT_REFRESH_SECRET: required("JWT_REFRESH_SECRET"),
