@@ -86,7 +86,7 @@ package.json
 - [x] Task 2.1: Utilities (password, jwt, response, errors, async-handler)
 - [x] Task 2.2: Validation Schemas (validate middleware, auth validators)
 - [x] Task 2.3: Auth Service (register, login)
-- [ ] Task 2.4: Auth Routes + App Setup
+- [x] Task 2.4: Auth Routes + App Setup
 
 ### Phase 3: Authorization Middleware & Refresh Tokens
 - [ ] Task 3.1: JWT Validation Middleware
