@@ -101,8 +101,9 @@ Every task MUST follow this exact workflow in order. Do NOT skip steps.
 5. **Git commit** the implementation
 6. **Run the tests** and ensure they pass
 7. **Git commit** any fixes needed to pass tests
-8. **Push** the branch to remote
-9. **Create a PR** to main
+8. **Mark the task `[x]`** in `specs/v1/implementation-plan.md` and commit
+9. **Push** the branch to remote
+10. **Create a PR** to main
 
 ```mermaid
 graph TD
@@ -112,11 +113,12 @@ graph TD
     C --> D[Git commit]
     D --> E[Pass the tests]
     E --> F[Git commit]
-    F --> G[Push]
-    G --> H[Create PR to main]
+    F --> G[Mark task done in implementation-plan.md + commit]
+    G --> H[Push]
+    H --> I[Create PR to main]
 ```
 
-**Violations**: Skipping the test-first step, reusing another task's branch, writing all code without intermediate commits, or pushing directly to main are NOT acceptable.
+**Violations**: Skipping the test-first step, reusing another task's branch, writing all code without intermediate commits, skipping the task status update, or pushing directly to main are NOT acceptable.
 
 ## Service Workflows
 
