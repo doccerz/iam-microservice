@@ -1,6 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import type { Request, Response, NextFunction } from "express";
+
+vi.mock("../../config/env.js", () => ({
+  env: {
+    JWT_ACCESS_SECRET: "test-access-secret",
+    JWT_REFRESH_SECRET: "test-refresh-secret",
+    JWT_ACCESS_EXPIRY: "15m",
+    JWT_REFRESH_EXPIRY: "7d",
+    DATABASE_URL: "postgres://localhost/test",
+    DATABASE_SCHEMA: "public",
+    PORT: "3000",
+    DEFAULT_ROLE_SLUG: "user",
+  },
+}));
+
 import { validate } from "../validate.js";
 
 describe("middleware/validate.ts", () => {
