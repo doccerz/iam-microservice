@@ -92,10 +92,9 @@ package.json
 - [x] Task 3.1: JWT Validation Middleware
 - [x] Task 3.3: Refresh Token Endpoint
 - [x] Task 3.2: Permission Guard
-- [x] Task 3.3: Refresh Token Endpoint
 
 ### Phase 4: Account Lifecycle & Admin Routes
-- [ ] Task 4.1: Change Password
+- [x] Task 4.1: Change Password
 - [ ] Task 4.2: Reset Password
 - [ ] Task 4.3: Users Service & Routes
 

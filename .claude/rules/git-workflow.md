@@ -16,6 +16,7 @@
 
 Every task MUST follow this exact workflow in order. Do NOT skip steps.
 
+1. **Update codebase** - checkout main and pull
 1. **Create a NEW branch from `main`** — e.g., `feat/task-X.Y-description`. Never reuse another task's branch.
 2. **Write failing tests FIRST** — before writing any implementation code
 3. **Git commit** the failing tests
@@ -29,7 +30,8 @@ Every task MUST follow this exact workflow in order. Do NOT skip steps.
 
 ```mermaid
 graph TD
-    Z[Create new branch from main] --> A[Write failing tests]
+    Y[Checkout main and pull] --> Z[Create new branch from main]
+    Z --> A[Write failing tests]
     A --> B[Git commit]
     B --> C[Execute plan]
     C --> D[Git commit]
