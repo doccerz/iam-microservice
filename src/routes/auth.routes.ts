@@ -1,8 +1,14 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/async-handler.js";
-import { register, login, refresh } from "../services/auth.service.js";
-import { registerSchema, loginSchema, refreshSchema } from "../validators/auth.validators.js";
+import { authenticate } from "../middleware/authenticate.js";
+import { register, login, refresh, changePassword } from "../services/auth.service.js";
+import {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  changePasswordSchema,
+} from "../validators/auth.validators.js";
 import { sendSuccess } from "../utils/response.js";
 
 const router = Router();
@@ -31,6 +37,16 @@ router.post(
   asyncHandler(async (req, res) => {
     const result = await refresh(req.body.token);
     sendSuccess(res, result, 200);
+  }),
+);
+
+router.post(
+  "/change-password",
+  authenticate,
+  validate(changePasswordSchema),
+  asyncHandler(async (req, res) => {
+    await changePassword(req.user!.sub, req.body);
+    sendSuccess(res);
   }),
 );
 
