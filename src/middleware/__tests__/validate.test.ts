@@ -1,0 +1,108 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
+import type { Request, Response, NextFunction } from "express";
+import { validate } from "../validate.js";
+
+describe("middleware/validate.ts", () => {
+  let mockReq: Partial<Request> & { body: unknown };
+  let mockRes: { status: ReturnType<typeof vi.fn>; json: ReturnType<typeof vi.fn> };
+  let mockNext: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockReq = { body: {} };
+    mockRes = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+    };
+    mockNext = vi.fn();
+  });
+
+  it("calls next() when body matches schema", () => {
+    const schema = z.object({ name: z.string() });
+    mockReq.body = { name: "Alice" };
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockNext).toHaveBeenCalledWith();
+    expect(mockNext).toHaveBeenCalledTimes(1);
+  });
+
+  it("replaces req.body with parsed data on success", () => {
+    const schema = z.object({ name: z.string().trim() });
+    mockReq.body = { name: "  Alice  " };
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockReq.body).toEqual({ name: "Alice" });
+  });
+
+  it("writes transform output to req.body", () => {
+    const schema = z.object({
+      email: z.string().transform((v) => v.toLowerCase()),
+    });
+    mockReq.body = { email: "USER@EXAMPLE.COM" };
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockNext).toHaveBeenCalled();
+    expect(mockReq.body).toEqual({ email: "user@example.com" });
+  });
+
+  it("returns 400 when body is invalid", () => {
+    const schema = z.object({ email: z.string().email() });
+    mockReq.body = { email: "not-an-email" };
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false })
+    );
+  });
+
+  it("does not call next() on validation failure", () => {
+    const schema = z.object({ email: z.string().email() });
+    mockReq.body = { email: "bad" };
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+
+  it("includes all issue messages in the error string", () => {
+    const schema = z.object({
+      email: z.string().email(),
+      password: z.string().min(8),
+    });
+    mockReq.body = { email: "bad", password: "short" };
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    const jsonArg = mockRes.json.mock.calls[0][0] as { error: string };
+    expect(jsonArg.error).toContain("Invalid email");
+    expect(jsonArg.error).toContain("8");
+  });
+
+  it("passes through when optional fields are absent", () => {
+    const schema = z.object({
+      name: z.string(),
+      nickname: z.string().optional(),
+    });
+    mockReq.body = { name: "Alice" };
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockNext).toHaveBeenCalled();
+    expect(mockRes.status).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 on empty body against required-field schema", () => {
+    const schema = z.object({ token: z.string() });
+    mockReq.body = {};
+
+    validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+});
