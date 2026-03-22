@@ -1,0 +1,321 @@
+ ▐▛███▜▌   Claude Code v2.1.81
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    ~/code/user-microservice-js
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯ /plan @specs/v1/implementation-plan.md  task 3.2                              
+  ⎿  Enabled plan mode
+
+  Read 1 file (ctrl+o to expand)
+
+● Let me explore the codebase to understand the existing patterns before
+  planning.
+
+● Explore(Explore middleware and test patterns)
+  ⎿  Done (26 tool uses · 48.1k tokens · 48s)
+  (ctrl+o to expand)
+
+● Let me read the key files to confirm the patterns.
+
+  Read 2 files (ctrl+o to expand)
+
+● Now I have everything I need. Let me write the plan.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/jolly-rolling-cerf.md · /plan to edit
+     Task 3.2: Permission Guard (src/middleware/authorize.ts)
+
+     Context
+
+     Task 3.1 (JWT authentication middleware) is complete. Task 3.2 builds on it
+      by adding authorization — a higher-order middleware factory that checks
+     whether the authenticated user holds the required permission slugs (from
+     req.user.permissions). This gate is used by all protected routes in Phase
+     4.
+
+     ---
+     Branch
+
+     feat/task-3.2-permission-guard (created from main)
+
+     ---
+     Files to Create / Modify
+
+     ┌────────────────────────────────────────────┬─────────────────────────────
+     ┐
+     │                    File                    │           Action
+     │
+     ├────────────────────────────────────────────┼─────────────────────────────
+     ┤
+     │ src/middleware/__tests__/authorize.test.ts │ Create — failing tests
+     │
+     │                                            │ first
+     │
+     ├────────────────────────────────────────────┼─────────────────────────────
+     ┤
+     │ src/middleware/authorize.ts                │ Create — implementation
+     │
+     ├────────────────────────────────────────────┼─────────────────────────────
+     ┤
+     │ specs/v1/implementation-plan.md            │ Edit — mark task 3.2 [x]
+     │
+     └────────────────────────────────────────────┴─────────────────────────────
+     ┘
+
+     ---
+     Implementation
+
+     src/middleware/authorize.ts
+     import type { Request, Response, NextFunction } from "express";
+     import { ForbiddenError, UnauthorizedError } from "../utils/index.js";
+
+     export function authorize(...requiredPermissions: string[]) {
+       return (req: Request, _res: Response, next: NextFunction): void => {
+         if (!req.user) {
+           next(new UnauthorizedError("Not authenticated"));
+           return;
+         }
+         const hasAll = requiredPermissions.every(p =>
+     req.user!.permissions.includes(p));
+         if (!hasAll) {
+           next(new ForbiddenError("Insufficient permissions"));
+           return;
+         }
+         next();
+       };
+     }
+
+     Key points:
+     - authorize(...requiredPermissions) — variadic, mirrors the plan spec
+     - Guards against missing req.user (401) — defensive in case used without
+     authenticate
+     - Uses .every() — ALL listed permissions must be present
+     - Throws ForbiddenError (403) on missing permissions
+
+     ---
+     Test Cases (src/middleware/__tests__/authorize.test.ts)
+
+     Follow pattern from authenticate.test.ts (Vitest, mock req/res/next):
+
+     1. req.user is undefined → next(UnauthorizedError)
+     2. User has all required permissions → next() (no error)
+     3. User is missing one of two required permissions → next(ForbiddenError)
+     4. User has no permissions, one required → next(ForbiddenError)
+     5. authorize() called with zero required permissions → next() (always
+     passes)
+     6. Multiple required permissions all present → next()
+
+     Mock pattern (no module mocks needed — no external deps):
+     function mockReq(permissions: string[]): Partial<Request> & { user:
+     JwtPayload } {
+       return { user: { sub: "u1", email: "a@b.com", permissions } };
+     }
+
+     ---
+     Workflow (per CLAUDE.md)
+
+     1. git checkout main && git checkout -b feat/task-3.2-permission-guard
+     2. Write failing tests → git commit
+     3. Implement authorize.ts → git commit
+     4. Run npm test — ensure all pass → fix if needed → git commit
+     5. Mark [x] in specs/v1/implementation-plan.md → git commit
+     6. Push branch → create PR to main
+
+     ---
+     Verification
+
+     npm test -- src/middleware/__tests__/authorize.test.ts
+
+     All 6 test cases should pass. No integration test needed — pure unit test
+     of middleware function.
+
+● Bash(git checkout main && git checkout -b feat/task-3.2-permission-guard)
+  ⎿  Already on 'main'
+     Your branch is up to date with 'origin/main'.
+     Switched to a new branch 'feat/task-3.2-permission-guard'
+
+● Now write the failing tests first.
+
+● Write(src/middleware/__tests__/authorize.test.ts)
+  ⎿  Wrote 73 lines to src/middleware/__tests__/authorize.test.ts
+       1 import { describe, it, expect, vi, beforeEach } from "vitest";
+       2 import type { Request, Response, NextFunction } from "express";
+       3 import type { JwtPayload } from "../../types/index.js";
+       4 import { authorize } from "../authorize.js";
+       5 import { ForbiddenError, UnauthorizedError } from "../../utils/e
+         rrors.js";
+       6 
+       7 function mockReq(permissions?: string[]): Partial<Request> {
+       8   if (permissions === undefined) {
+       9     return { headers: {} };
+      10   }
+     … +63 lines (ctrl+o to expand)
+
+● Bash(npm test -- src/middleware/__tests__/authorize.test.ts 2>&1 | tail -20)
+  ⎿  ⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+      FAIL  src/middleware/__tests__/authorize.test.ts [ src/middleware/__t
+     … +16 lines (ctrl+o to expand)
+
+● Tests fail as expected. Commit them.
+
+● Bash(git add src/middleware/__tests__/authorize.test.ts && git commit -m
+      "$(cat <<'EOF'
+      test(task-3.2): write failing tests for authorize permission guard
+      middleware…)
+  ⎿  [feat/task-3.2-permission-guard 09c1d17] test(task-3.2): write failing
+      tests for authorize permission guard middleware
+      1 file changed, 73 insertions(+)
+      create mode 100644 src/middleware/__tests__/authorize.test.ts
+
+● Now implement the middleware.
+
+● Write(src/middleware/authorize.ts)
+  ⎿  Wrote 17 lines to src/middleware/authorize.ts
+       1 import type { Request, Response, NextFunction } from "express";
+       2 import { ForbiddenError, UnauthorizedError } from "../utils/inde
+         x.js";
+       3 
+       4 export function authorize(...requiredPermissions: string[]) {
+       5   return (req: Request, _res: Response, next: NextFunction): voi
+         d => {
+       6     if (!req.user) {
+       7       next(new UnauthorizedError("Not authenticated"));
+       8       return;
+       9     }
+      10     const hasAll = requiredPermissions.every(p => req.user!.perm
+         issions.includes(p));
+     … +7 lines (ctrl+o to expand)
+
+● Bash(npm test -- src/middleware/__tests__/authorize.test.ts 2>&1 | tail -20)
+  ⎿   FAIL  src/middleware/__tests__/authorize.test.ts [ src/middleware/__t
+     ests__/authorize.test.ts ]
+     Error: Missing required environment variable: DATABASE_SCHEMA
+     … +13 lines (ctrl+o to expand)
+
+● Bash(npm test -- src/middleware/__tests__/authorize.test.ts 2>&1)
+  ⎿  Error: Exit code 1
+
+     > user-microservice@1.0.0 test
+     > vitest run src/middleware/__tests__/authorize.test.ts
+
+
+      RUN  v4.1.0 /home/babin/code/user-microservice-js
+
+      ❯ src/middleware/__tests__/authorize.test.ts (0 test)
+
+     … +21 lines (ctrl+o to see all)
+● The test imports utils/index.js transitively (via authorize.ts), which loads
+  jwt.ts → env.ts. I need to add the env mock like authenticate.test.ts does.
+
+● Update(src/middleware/__tests__/authorize.test.ts)
+  ⎿  Added 14 lines
+       1  import { describe, it, expect, vi, beforeEach } from "vitest";
+       2  import type { Request, Response, NextFunction } from "express";
+       3  import type { JwtPayload } from "../../types/index.js";
+       4 +                                                               
+       5 +vi.mock("../../config/env.js", () => ({                        
+       6 +  env: {                                                       
+       7 +    JWT_ACCESS_SECRET: "test-access-secret",                   
+       8 +    JWT_REFRESH_SECRET: "test-refresh-secret",                 
+       9 +    JWT_ACCESS_EXPIRY: "15m",                                  
+      10 +    JWT_REFRESH_EXPIRY: "7d",                                  
+      11 +    DATABASE_URL: "postgres://localhost/test",                 
+      12 +    DATABASE_SCHEMA: "public",                                 
+      13 +    PORT: "3000",                                              
+      14 +    DEFAULT_ROLE_SLUG: "user",                                 
+      15 +  },                                                           
+      16 +}));                                                           
+      17 +                                                               
+      18  import { authorize } from "../authorize.js";
+      19  import { ForbiddenError, UnauthorizedError } from "../../utils/
+          errors.js";
+      20  
+
+● Bash(npm test -- src/middleware/__tests__/authorize.test.ts 2>&1)
+  ⎿  > user-microservice@1.0.0 test
+     > vitest run src/middleware/__tests__/authorize.test.ts
+     … +9 lines (ctrl+o to expand)
+
+● All 6 tests pass. Commit the implementation.
+
+● Bash(git add src/middleware/authorize.ts
+      src/middleware/__tests__/authorize.test.ts && git commit -m "$(cat <<'EOF'
+      feat(task-3.2): implement authorize permission gu…)
+  ⎿  [feat/task-3.2-permission-guard a3931d5] feat(task-3.2): implement aut
+     horize permission guard middleware
+      2 files changed, 31 insertions(+)
+      create mode 100644 src/middleware/authorize.ts
+
+● Now mark the task done in the implementation plan.
+
+● Update(specs/v1/implementation-plan.md)
+  ⎿  Added 1 line, removed 1 line
+      90  
+      91  ### Phase 3: Authorization Middleware & Refresh Tokens
+      92  - [x] Task 3.1: JWT Validation Middleware
+      93 -- [ ] Task 3.2: Permission Guard                               
+      93 +- [x] Task 3.2: Permission Guard                               
+      94  - [ ] Task 3.3: Refresh Token Endpoint
+      95  
+      96  ### Phase 4: Account Lifecycle & Admin Routes
+
+● Bash(git add specs/v1/implementation-plan.md && git commit -m "$(cat <<'EOF'
+      docs(task-3.2): mark task complete in implementation plan…)
+  ⎿  [feat/task-3.2-permission-guard ce60994] docs(task-3.2): mark task com
+     plete in implementation plan
+      1 file changed, 1 insertion(+), 1 deletion(-)
+
+● Bash(git push -u origin feat/task-3.2-permission-guard 2>&1)
+  ⎿  remote:
+     remote: Create a pull request for 'feat/task-3.2-permission-guard' on
+     GitHub by visiting:
+     … +8 lines (ctrl+o to expand)
+
+● Bash(gh pr create --title "feat(task-3.2): permission guard middleware" --body
+       "$(cat <<'EOF'
+      ## Summary…)
+  ⎿  https://github.com/doccerz/user-microservice-js/pull/11
+
+● Task 3.2 is complete. PR:
+  https://github.com/doccerz/user-microservice-js/pull/11
+
+  Summary of what was done:
+  - src/middleware/authorize.ts — authorize(...requiredPermissions) returns
+  middleware that checks all permission slugs exist in req.user.permissions,
+  returning 401 if unauthenticated or 403 if insufficient
+  - src/middleware/__tests__/authorize.test.ts — 6 test cases covering all edge
+  cases (all pass)
+  - specs/v1/implementation-plan.md — task 3.2 marked [x]
+
+✻ Cooked for 7m 49s
+
+❯ save plan: @specs/v1/20260322/3.2/                                            
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(mkdir -p /home/babin/code/user-microservice-js/specs/v1/20260322/3.2)
+  ⎿  Done
+
+● Bash(cp /home/babin/.claude/plans/jolly-rolling-cerf.md
+      /home/babin/code/user-microservice-js/specs/v1/20260322/3.2/plan.md)
+  ⎿  Done
+
+● Bash(git add specs/v1/20260322/3.2/plan.md && git commit -m "$(cat <<'EOF'
+      docs(task-3.2): export implementation plan to specs…)
+  ⎿  [feat/task-3.2-permission-guard 7b54d55] docs(task-3.2): export implem
+     entation plan to specs
+      1 file changed, 91 insertions(+)
+      create mode 100644 specs/v1/20260322/3.2/plan.md
+
+● Bash(git push 2>&1)
+  ⎿  To github.com:doccerz/user-microservice-js.git
+        ce60994..7b54d55  feat/task-3.2-permission-guard -> feat/task-3.2-p
+     ermission-guard
+
+● Plan saved to specs/v1/20260322/3.2/plan.md and pushed.
