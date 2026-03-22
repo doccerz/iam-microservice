@@ -7,7 +7,7 @@
 @.claude/rules/service-workflows.md
 
 ## **IMPORTANT**: CLAUDE.md management
-- Always update CLAUDE.md (or the relevant rules file) with important architectural changes
+- Always update CLAUDE.md (or the relevant rules file) with important architectural, pattern, workflow changes
 - Always use mermaid.js syntax for workflows
 
 ## **IMPORTANT**: Do not load to context unless explicitly mentioned
