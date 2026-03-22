@@ -11,9 +11,14 @@ import {
 } from "../db/schema/index.js";
 import { env } from "../config/env.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import { signAccessToken, signRefreshToken, signResetToken, verifyRefreshToken, verifyResetToken } from "../utils/jwt.js";
 import { ConflictError, UnauthorizedError, NotFoundError } from "../utils/errors.js";
-import type { RegisterInput, LoginInput, ChangePasswordInput } from "../validators/auth.validators.js";
+import type {
+  RegisterInput,
+  LoginInput,
+  ChangePasswordInput,
+  ResetPasswordInput,
+} from "../validators/auth.validators.js";
 
 function parseExpiry(expiry: string): number {
   const unit = expiry.slice(-1);
@@ -128,6 +133,31 @@ export async function changePassword(userId: string, data: ChangePasswordInput):
 
   const isValid = await verifyPassword(data.oldPassword, user.passwordHash);
   if (!isValid) throw new UnauthorizedError("Invalid credentials");
+
+  const newHash = await hashPassword(data.newPassword);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({ passwordHash: newHash, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    await tx.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+  });
+}
+
+export async function requestPasswordReset(email: string): Promise<{ resetToken: string }> {
+  const [user] = await db.select().from(users).where(eq(users.email, email));
+  if (!user) throw new NotFoundError("User not found");
+
+  const resetToken = signResetToken({ sub: user.id });
+  return { resetToken };
+}
+
+export async function resetPassword(data: ResetPasswordInput): Promise<void> {
+  const { sub: userId } = verifyResetToken(data.token);
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  if (!user) throw new NotFoundError("User not found");
 
   const newHash = await hashPassword(data.newPassword);
 

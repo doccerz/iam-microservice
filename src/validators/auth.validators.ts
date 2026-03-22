@@ -21,6 +21,10 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
 
+export const requestPasswordResetSchema = z.object({
+  email: z.string().trim().email().transform((v) => v.toLowerCase()),
+});
+
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
   newPassword: z.string().min(8).max(128),
@@ -33,5 +37,6 @@ export const refreshSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
