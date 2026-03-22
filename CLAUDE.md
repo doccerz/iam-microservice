@@ -82,7 +82,7 @@ npm run db:seed          # Seed roles + permissions
 
 - Do `git add` and `git commit` after every meaningful change (e.g., after writing tests, after implementing code, after fixing tests). Do NOT batch all work into a single commit at the end.
 - Don't push directly to main
-- Always create a new branch for every completion of a task
+- **CRITICAL**: Always create a NEW branch for EACH task (e.g., `feat/task-1.4-seed-script`). Never add commits for a new task onto an existing task's branch. Create the branch from `main` before starting any work.
 - Once task is completed, push the branch and create a PR to main
 - Commit messages should be descriptive and follow conventional commit style
 
@@ -94,18 +94,20 @@ npm run db:seed          # Seed roles + permissions
 
 Every task MUST follow this exact workflow in order. Do NOT skip steps.
 
-1. **Write failing tests FIRST** — before writing any implementation code
-2. **Git commit** the failing tests
-3. **Implement the code** to make the tests pass
-4. **Git commit** the implementation
-5. **Run the tests** and ensure they pass
-6. **Git commit** any fixes needed to pass tests
-7. **Push** the branch to remote
-8. **Create a PR** to main
+1. **Create a NEW branch from `main`** — e.g., `feat/task-X.Y-description`. Never reuse another task's branch.
+2. **Write failing tests FIRST** — before writing any implementation code
+3. **Git commit** the failing tests
+4. **Implement the code** to make the tests pass
+5. **Git commit** the implementation
+6. **Run the tests** and ensure they pass
+7. **Git commit** any fixes needed to pass tests
+8. **Push** the branch to remote
+9. **Create a PR** to main
 
 ```mermaid
 graph TD
-    A[Write failing tests] --> B[Git commit]
+    Z[Create new branch from main] --> A[Write failing tests]
+    A --> B[Git commit]
     B --> C[Execute plan]
     C --> D[Git commit]
     D --> E[Pass the tests]
@@ -114,7 +116,7 @@ graph TD
     G --> H[Create PR to main]
 ```
 
-**Violations**: Skipping the test-first step, writing all code without intermediate commits, or pushing directly to main are NOT acceptable.
+**Violations**: Skipping the test-first step, reusing another task's branch, writing all code without intermediate commits, or pushing directly to main are NOT acceptable.
 
 ## Service Workflows
 

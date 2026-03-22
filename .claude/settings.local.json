@@ -12,7 +12,9 @@
       "Bash(npm run:*)",
       "Bash(cd:*)",
       "Bash(find /c/Users/babin/code/user-microservice-js -maxdepth 2 -type f \\\\\\(-name *.test.ts -o -name *.spec.ts -o -name jest.config.* -o -name vitest.config.* \\\\\\))",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(npm list:*)",
+      "Bash(git pull:*)"
     ]
   }
 }

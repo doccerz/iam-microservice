@@ -63,15 +63,56 @@ package.json
 
 ---
 
-## Phase 0: Project Initialization - DONE
+## Progress Tracker
+
+> **IMPORTANT**: Checked (`[x]`) tasks and their parent phases are **DONE** and **FROZEN**.
+> Do NOT re-scan or re-plan them. When planning or executing work,
+> start from the first unchecked (`[ ]`) task. Only reference completed phases for context
+> (e.g., imports, schemas) — never as work items.
+
+### Phase 0: Project Initialization
+- [x] Initialize project, install dependencies, configure `package.json` scripts
+- [x] Configure `tsconfig.json`
+- [x] Configure `drizzle.config.ts`
+- [x] Create `src/config/env.ts`
+
+### Phase 1: Database Schema, Types, Seed
+- [x] Task 1.1: Drizzle Schema (7 tables)
+- [x] Task 1.2: TypeScript Types (`src/types/`)
+- [x] Task 1.3: DB Client + Migration
+- [x] Task 1.4: Seed Script
+
+### Phase 2: Authentication Core
+- [ ] Task 2.1: Utilities (password, jwt, response, errors, async-handler)
+- [ ] Task 2.2: Validation Schemas (validate middleware, auth validators)
+- [ ] Task 2.3: Auth Service (register, login)
+- [ ] Task 2.4: Auth Routes + App Setup
+
+### Phase 3: Authorization Middleware & Refresh Tokens
+- [ ] Task 3.1: JWT Validation Middleware
+- [ ] Task 3.2: Permission Guard
+- [ ] Task 3.3: Refresh Token Endpoint
+
+### Phase 4: Account Lifecycle & Admin Routes
+- [ ] Task 4.1: Change Password
+- [ ] Task 4.2: Reset Password
+- [ ] Task 4.3: Users Service & Routes
+
+### Phase 5: Containerization
+- [ ] Task 5.1: Dockerfile
+- [ ] Task 5.2: docker-compose.yml
+
+---
+
+## Phase 0: Project Initialization
 
 ### Files to create: `package.json`, `tsconfig.json`, `drizzle.config.ts`, `.env.example`, `.gitignore`, `src/config/env.ts`, `.dockerignore`
 
-1. **`npm init -y`** then install dependencies:  - DONE
+1. **`npm init -y`** then install dependencies:
    - Runtime: `express`, `drizzle-orm`, `postgres`, `argon2`, `jsonwebtoken`, `zod`, `dotenv`
    - Dev: `typescript`, `@types/express`, `@types/jsonwebtoken`, `@types/node`, `tsx`, `drizzle-kit`
 
-2. **`package.json` scripts:**  - DONE
+2. **`package.json` scripts:**
    ```
    "dev": "tsx watch src/server.ts"
    "build": "tsc"
@@ -81,11 +122,9 @@ package.json
    "db:seed": "tsx src/db/seed.ts"
    ```
 
-3. **`tsconfig.json`**: target ES2022, module NodeNext, strict, outDir `./dist`, rootDir `./src`  - DONE
-
-4. **`drizzle.config.ts`**: schema path `src/db/schema/index.ts`, output `./drizzle`, connection from `DATABASE_URL`  - DONE
-
-5. **`src/config/env.ts`**: Load dotenv, export typed config:  - DONE
+3. **`tsconfig.json`**: target ES2022, module NodeNext, strict, outDir `./dist`, rootDir `./src`
+4. **`drizzle.config.ts`**: schema path `src/db/schema/index.ts`, output `./drizzle`, connection from `DATABASE_URL`
+5. **`src/config/env.ts`**: Load dotenv, export typed config:
    - `DATABASE_SCHEMA`, `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
    - `JWT_ACCESS_EXPIRY` (default "15m"), `JWT_REFRESH_EXPIRY` (default "7d")
    - `PORT` (default 3000), `DEFAULT_ROLE_SLUG` (default "user")
@@ -94,10 +133,9 @@ package.json
 
 ## Phase 1: Database Schema, Types, Seed
 
-### Task 1.1: Drizzle Schema (7 tables in `src/db/schema/`)  - DONE
+### Task 1.1: Drizzle Schema (7 tables in `src/db/schema/`)
 
 > Use DATABASE_SCHEMA as its schema
-
 | Table | Key Columns | Notes |
 |-------|-------------|-------|
 | `users` | id (uuid PK), email (unique), password_hash, is_active, created_at, updated_at | |
@@ -110,20 +148,17 @@ package.json
 
 Barrel export from `src/db/schema/index.ts`. Relations in `src/db/relations.ts`.
 
-### Task 1.2: TypeScript Types (`src/types/`)  - DONE
-
+### Task 1.2: TypeScript Types (`src/types/`)
 - Derive types from Drizzle via `InferSelectModel`/`InferInsertModel`
 - Define `JwtPayload { sub, email, permissions: string[] }`
 - Define `ApiResponse<T> { success, data?, error? }`
 - Augment Express `Request` with `user?: JwtPayload`
 
 ### Task 1.3: DB Client + Migration (`src/db/index.ts`, `src/db/migrate.ts`)
-
 - Create Drizzle client with `postgres` driver
 - Migration runner using `drizzle-orm/postgres-js/migrator`
 
 ### Task 1.4: Seed Script (`src/db/seed.ts`)
-
 - Permissions: `user:read`, `user:write`, `user:delete`, `role:read`, `role:write`
 - Roles: `admin` (all permissions), `user` (`user:read` only)
 - Use `onConflictDoNothing()` for idempotency
