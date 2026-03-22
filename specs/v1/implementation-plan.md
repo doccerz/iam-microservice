@@ -89,7 +89,7 @@ package.json
 - [x] Task 2.4: Auth Routes + App Setup
 
 ### Phase 3: Authorization Middleware & Refresh Tokens
-- [ ] Task 3.1: JWT Validation Middleware
+- [x] Task 3.1: JWT Validation Middleware
 - [ ] Task 3.2: Permission Guard
 - [ ] Task 3.3: Refresh Token Endpoint
 
