@@ -254,8 +254,10 @@ describe("users.service", () => {
     it("updates isActive on users table when provided", async () => {
       const updatedUser = { ...existingUser, isActive: false };
       mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) => {
-        mockTx.where.mockResolvedValueOnce([existingUser]); // fetch user
-        mockTx.returning.mockResolvedValueOnce([updatedUser]); // update user returning
+        mockTx.where
+          .mockResolvedValueOnce([existingUser]) // 1st call: fetch user
+          .mockReturnValue(mockTx); // 2nd call: update chain → .returning()
+        mockTx.returning.mockResolvedValueOnce([updatedUser]);
         return fn(mockTx);
       });
 
@@ -280,7 +282,9 @@ describe("users.service", () => {
     it("returns updated user data", async () => {
       const updatedUser = { ...existingUser, isActive: false, updatedAt: new Date() };
       mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) => {
-        mockTx.where.mockResolvedValueOnce([existingUser]);
+        mockTx.where
+          .mockResolvedValueOnce([existingUser])
+          .mockReturnValue(mockTx);
         mockTx.returning.mockResolvedValueOnce([updatedUser]);
         return fn(mockTx);
       });
