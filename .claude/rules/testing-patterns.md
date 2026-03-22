@@ -73,12 +73,36 @@ For route tests without an HTTP server:
 type RouteLayer = { route: { path: string; stack: { method: string; handle: Function }[] } };
 function getHandler(method: string, path: string) {
   const layer = (router as unknown as { stack: RouteLayer[] }).stack
-    .find(l => l.route?.path === path);
+    .find(l => l.route?.path === path && l.route.stack.some(s => s.method === method));
   const handlers = layer?.route.stack.filter(s => s.method === method);
   return handlers?.[handlers.length - 1]?.handle; // last handler = skips validate middleware
 }
 // After calling an async handler, flush the asyncHandler microtask:
 await Promise.resolve();
+```
+
+**Gotcha:** Filter by method in the `find` predicate, not just path. When `POST /` and `GET /` both exist, `find` without the method check returns the first match and the GET handler comes back `undefined`.
+
+## Sequential DB mock calls (e.g. count + data query)
+
+When a service makes two queries on the same chain (e.g. `listUsers` does a count then a data query), sequence with `mockResolvedValueOnce` + `mockReturnValue`:
+
+```ts
+mockWhere
+  .mockResolvedValueOnce([{ total: 3 }])  // 1st call: terminates (count query)
+  .mockReturnValue(mockDb);               // 2nd call: chains forward (data query)
+mockOffset.mockResolvedValueOnce([...rows]);
+```
+
+## Transaction mock — chaining through `.returning()`
+
+When a transaction has `select` then `update().set().where().returning()`, `mockTx.where` must chain back to `mockTx` after the first resolve:
+
+```ts
+mockTx.where
+  .mockResolvedValueOnce([existingRow])  // 1st call: select terminates
+  .mockReturnValue(mockTx);              // 2nd call: update chain → .returning()
+mockTx.returning.mockResolvedValueOnce([updatedRow]);
 ```
 
 ## Describe structure
