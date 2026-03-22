@@ -67,3 +67,7 @@ npm run db:seed          # Seed roles + permissions
 - `GET /users` — List/filter users (admin only, paginated)
 - `PATCH /users/:id` — Update profile or deactivate
 - `PUT /users/:id/roles` — Reassign roles
+
+## Docker Notes
+- `argon2` is a native addon — builder stage needs `apk add --no-cache python3 make g++` (Alpine) to compile it
+- `npm run db:migrate` uses `tsx` (dev dep), so run migrations from host or add a compiled migrate entrypoint for containers

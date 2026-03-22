@@ -99,7 +99,7 @@ package.json
 - [x] Task 4.3: Users Service & Routes
 
 ### Phase 5: Containerization
-- [ ] Task 5.1: Dockerfile
+- [x] Task 5.1: Dockerfile
 - [ ] Task 5.2: docker-compose.yml
 
 ---
