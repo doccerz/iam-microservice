@@ -15,8 +15,14 @@
       "Bash(npx vitest:*)",
       "Bash(npm list:*)",
       "Bash(git pull:*)",
+<<<<<<< HEAD
+      "Bash(node -e \"const z = require\\(''/home/babin/code/user-microservice-js/node_modules/zod''\\); console.log\\(z.version || ''no version''\\); const s = z.z || z; const schema = s.object\\({email: s.string\\(\\).email\\(\\)}\\); const r = schema.safeParse\\({email: ''bad''}\\); console.log\\(JSON.stringify\\(r.error?.issues\\)\\);\")",
+      "Bash(npm test:*)",
+      "Bash(./node_modules/.bin/vitest run:*)"
+=======
       "Bash(npm test:*)",
       "Skill(commit-commands:commit-push-pr)"
+>>>>>>> main
     ]
   }
 }
