@@ -68,6 +68,10 @@ npm run db:seed          # Seed roles + permissions
 - `PATCH /users/:id` — Update profile or deactivate
 - `PUT /users/:id/roles` — Reassign roles
 
+### Docs (`/docs`)
+- `GET /docs/` — Redirects to Swagger UI (`/docs/index.html?url=/docs/spec`)
+- `GET /docs/spec` — Returns raw OpenAPI 3.1 YAML (`src/docs/openapi.yaml`)
+
 ## Docker Notes
 - `argon2` is a native addon — builder stage needs `apk add --no-cache python3 make g++` (Alpine) to compile it
 - `npm run db:migrate` uses `tsx` (dev dep), so run migrations from host or add a compiled migrate entrypoint for containers
