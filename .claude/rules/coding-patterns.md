@@ -89,6 +89,10 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 - `JwtPayload`: `{ sub: string, email: string, permissions: string[] }`
 - Services accept `XxxInput` types — never `req: Request`
 
+## Swagger UI (swagger-ui-dist)
+- Ships with `swagger-initializer.js` hardcoded to petstore URL — `?url=` query param does NOT override it
+- Fix: add `router.get("/swagger-initializer.js", ...)` **before** `router.use(express.static(...))` to serve a custom initializer pointing to `/docs/spec`
+
 ## Module/Import Conventions
 
 - All imports use `.js` extension in TypeScript source (ESM interop, even in commonjs project)
