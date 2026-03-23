@@ -100,7 +100,7 @@ package.json
 
 ### Phase 5: Containerization
 - [x] Task 5.1: Dockerfile
-- [ ] Task 5.2: docker-compose.yml
+- [x] Task 5.2: docker-compose.yml
 
 ---
 

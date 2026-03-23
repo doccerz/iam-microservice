@@ -12,7 +12,7 @@
 
 - V1: [implementation-plan.md](../specs/v1/implementation-plan.md)
     - issues
-        - [docker-compose-debug.md](../specs/v1/20260323/.issues/docker-compose-debug.md)
+        - [docker-compose-debug.md](../specs/v1/issues/docker-compose-debug/docker-compose-debug.md)
 
 ## **IMPORTANT**: CLAUDE.md management
 - Always use mermaid.js syntax for workflows
