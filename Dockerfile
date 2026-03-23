@@ -6,14 +6,14 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 
 COPY tsconfig.json ./
 COPY src/ ./src/
 COPY drizzle/ ./drizzle/
 
-RUN npm run build
+RUN npm run build && cp -r src/docs dist/docs
 
 RUN npm prune --omit=dev
 

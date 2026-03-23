@@ -76,5 +76,6 @@ npm run db:seed          # Seed roles + permissions
 - `argon2` is a native addon — builder stage needs `apk add --no-cache python3 make g++` (Alpine) to compile it
 - `npm run db:migrate` uses `tsx` (dev dep), so run migrations from host or add a compiled migrate entrypoint for containers
 - `docker-compose.yml`: db service named `db`; DATABASE_URL uses `@db:5432`; startup order: `docker-compose up -d db` → `npm run db:migrate && npm run db:seed` → `docker-compose up app`
+- `tsc` only emits `.ts` files — non-TS assets (e.g. `src/docs/openapi.yaml`) must be copied manually in the Dockerfile: `cp -r src/docs dist/docs` after `npm run build`
 - `jq` is not installed — use raw `curl` output for API testing (no `| jq`)
 - psql shorthand: `docker compose exec db psql -U user -d iam_db` — schema tables need quoting: `"user-service".<table>`

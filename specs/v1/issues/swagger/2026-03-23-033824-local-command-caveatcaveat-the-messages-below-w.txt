@@ -1,0 +1,631 @@
+╭─── Claude Code v2.1.81 ──────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Alvin!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ Recent activity         │
+│                        ▘▘ ▝▝                       │ No recent activity      │
+│ Sonnet 4.6 · Claude Pro · babin.patron@gmail.com's │                         │
+│  Organization                                      │                         │
+│            ~/code/user-microservice-js             │                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯ /plan added swagger should be patterned to this projects end points, not pets 
+  ⎿  Enabled plan mode
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Explore(Explore OpenAPI spec and routes)
+  ⎿  Done (8 tool uses · 39.2k tokens · 22s)
+  (ctrl+o to expand)
+
+● Let me read the actual YAML file to verify what's really in it.
+
+  Read 1 file (ctrl+o to expand)
+
+● The openapi.yaml is already fully customized. Let me check how Swagger UI is
+  configured to understand why "pets" might be showing.
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● Now I understand the issue. Let me write the plan.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/piped-greeting-wadler.md · /plan to edit
+     Fix Swagger UI Showing Petstore Instead of Project API
+
+     Context
+
+     The docs.routes.ts redirects to /docs/index.html?url=/docs/spec, intending
+     to load openapi.yaml. However, swagger-ui-dist ships with a
+     swagger-initializer.js that has the Petstore URL hardcoded. That
+     initializer runs on page load and overrides whatever ?url= query parameter
+     was passed, so users see the Petstore API instead of the IAM spec.
+
+     The openapi.yaml itself is already fully correct and complete for this
+     project — it just never gets loaded.
+
+     Root Cause
+
+     swagger-ui-dist/swagger-initializer.js:
+     window.onload = function() {
+       window.ui = SwaggerUIBundle({
+         url: "https://petstore.swagger.io/v2/swagger.json",  // ← hardcoded, 
+     overrides ?url= param
+         ...
+       })
+     }
+
+     Fix
+
+     Serve a custom swagger-initializer.js from the Express router before the
+     static middleware serves the dist version. This custom file explicitly sets
+      url: "/docs/spec" so Swagger UI always loads the project's spec.
+
+     Files to modify
+
+     src/routes/docs.routes.ts — add one route before
+     router.use(express.static(...)):
+
+     router.get("/swagger-initializer.js", (_req, res) => {
+       res.type("application/javascript");
+       res.send(`
+     window.onload = function() {
+       window.ui = SwaggerUIBundle({
+         url: "/docs/spec",
+         dom_id: '#swagger-ui',
+         presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+         layout: "StandaloneLayout"
+       });
+     };
+       `.trim());
+     });
+
+     Route order matters: Express matches routes top-to-bottom, so this custom
+     handler fires before express.static(absolutePath()) would serve the dist
+     version.
+
+     No other files need to change
+
+     - openapi.yaml is already correct
+     - app.ts mounts /docs router unchanged
+     - Tests in docs.routes.test.ts may need a new assertion for the new route
+
+     Verification
+
+     1. docker-compose up (or npm run dev)
+     2. Navigate to http://localhost:3000/docs/ — should redirect to Swagger UI
+     showing IAM Microservice API, not Petstore
+     3. Confirm all 11 endpoints are visible under Auth and Users tags
+     4. Run npm test to ensure existing docs route tests still pass
+
+● Let me follow the git workflow. First, check main and look at the existing
+  test file.
+
+● Bash(git checkout main && git pull)
+  ⎿  Already on 'main'
+     M  Dockerfile
+     Your branch is up to date with 'origin/main'.
+     Already up to date.
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(git checkout -b fix/swagger-initializer-petstore)
+  ⎿  Switched to a new branch 'fix/swagger-initializer-petstore'
+
+● Now add the failing test first:
+
+● Update(src/routes/__tests__/docs.routes.test.ts)
+  ⎿  Added 26 lines
+       90      });
+       91    });
+       92  
+       93 +  describe("GET /swagger-initializer.js", () => {             
+       94 +    it("returns javascript content type", () => {             
+       95 +      const { req, res, next } = makeReqRes();                
+       96 +      const handler = getHandler("get", "/swagger-initializer.
+          +js");                                                         
+       97 +      expect(handler).toBeDefined();                          
+       98 +                                                              
+       99 +      handler!(req, res, next);                               
+      100 +                                                              
+      101 +      expect(res.type).toHaveBeenCalledWith("application/javas
+          +cript");                                                      
+      102 +    });                                                       
+      103 +                                                              
+      104 +    it("sends SwaggerUIBundle config pointing to /docs/spec", 
+          +() => {                                                       
+      105 +      const { req, res, next } = makeReqRes();                
+      106 +      const handler = getHandler("get", "/swagger-initializer.
+          +js");                                                         
+      107 +      const mockSend = vi.fn().mockReturnThis();              
+      108 +      (res as unknown as { send: typeof mockSend }).send = moc
+          +kSend;                                                        
+      109 +                                                              
+      110 +      handler!(req, res, next);                               
+      111 +                                                              
+      112 +      expect(mockSend).toHaveBeenCalledOnce();                
+      113 +      const body: string = mockSend.mock.calls[0][0] as string
+          +;                                                             
+      114 +      expect(body).toContain('url: "/docs/spec"');            
+      115 +      expect(body).not.toContain("petstore");                 
+      116 +    });                                                       
+      117 +  });                                                         
+      118 +                                                              
+      119    describe("static middleware", () => {
+      120      it("has a static middleware layer for swagger-ui-dist asse
+           ts", () => {
+      121        const stack = (docsRouter as unknown as { stack: RouterL
+           ayer[] }).stack;
+
+● Bash(npx vitest run src/routes/__tests__/docs.routes.test.ts 2>&1 | tail -30)
+  ⎿   FAIL  src/routes/__tests__/docs.routes.test.ts > docs.routes > GET /s
+     wagger-initializer.js > returns javascript content type
+     AssertionError: expected undefined to be defined
+     … +27 lines (ctrl+o to expand)
+
+● Tests fail as expected. Commit, then implement:
+
+● Bash(git add src/routes/__tests__/docs.routes.test.ts && git commit -m "test:
+      add failing tests for swagger-initializer.js override route")
+  ⎿  [fix/swagger-initializer-petstore cf9cc14] test: add failing tests for
+      swagger-initializer.js override route
+      1 file changed, 26 insertions(+)
+
+● Now implement the fix:
+● Update(src/routes/docs.routes.ts)
+  ⎿  Added 14 lines
+      15    res.redirect("/docs/index.html?url=/docs/spec");
+      16  });
+      17  
+      18 +router.get("/swagger-initializer.js", (_req, res) => {         
+      19 +  res.type("application/javascript");                          
+      20 +  res.send(                                                    
+      21 +    `window.onload = function() {                              
+      22 +  window.ui = SwaggerUIBundle({                                
+      23 +    url: "/docs/spec",                                         
+      24 +    dom_id: '#swagger-ui',                                     
+      25 +    presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalone
+         +Preset],                                                       
+      26 +    layout: "StandaloneLayout"                                 
+      27 +  });                                                          
+      28 +};`,                                                           
+      29 +  );                                                           
+      30 +});                                                            
+      31 +                                                               
+      32  router.use(express.static(absolutePath()));
+      33  
+      34  export default router;
+
+● Bash(npx vitest run src/routes/__tests__/docs.routes.test.ts 2>&1 | tail -20)
+  ⎿   FAIL  src/routes/__tests__/docs.routes.test.ts > docs.routes > GET /s
+     wagger-initializer.js > returns javascript content type
+     TypeError: res.send is not a function
+     … +14 lines (ctrl+o to expand)
+
+● Bash(npx vitest run src/routes/__tests__/docs.routes.test.ts 2>&1 | grep -A 20
+       "FAIL\|●")
+  ⎿   FAIL  src/routes/__tests__/docs.routes.test.ts > docs.routes > GET /s
+     wagger-initializer.js > returns javascript content type
+     TypeError: res.send is not a function
+     … +14 lines (ctrl+o to expand)
+
+● The mock res in makeReqRes() lacks a send method. Fix the test:
+
+● Update(src/routes/__tests__/docs.routes.test.ts)
+  ⎿  Added 1 line
+      43      type: vi.fn().mockReturnThis(),
+      44      sendFile: vi.fn().mockReturnThis(),
+      45      redirect: vi.fn().mockReturnThis(),
+      46 +    send: vi.fn().mockReturnThis(),                            
+      47      status: vi.fn().mockReturnThis(),
+      48      json: vi.fn().mockReturnThis(),
+      49    } as unknown as Response;
+
+● Bash(npx vitest run src/routes/__tests__/docs.routes.test.ts 2>&1 | tail -10)
+  ⎿   RUN  v4.1.0 /home/babin/code/user-microservice-js
+
+     (node:2501117) Warning: `--localstorage-file` was provided without a v
+     … +9 lines (ctrl+o to expand)
+
+● All 6 pass. Run the full test suite:
+
+● Bash(rm -rf dist/ && npx vitest run 2>&1 | tail -15)
+  ⎿       33|
+          34|     expect(mockMigrate).toHaveBeenCalledOnce();
+          35|     expect(mockMigrate).toHaveBeenCalledWith(mockDb, {
+     … +11 lines (ctrl+o to expand)
+
+● Bash(npx vitest run 2>&1 | grep "FAIL")
+  ⎿   FAIL  src/db/__tests__/migrate.test.ts > db/migrate.ts — runMigration
+     s() > calls migrate with the db instance and correct config
+
+● That's the known pre-existing failure (migrate.test.ts) — not a regression.
+  Commit and push:
+
+● Bash(git add src/routes/docs.routes.ts
+      src/routes/__tests__/docs.routes.test.ts && git commit -m "fix: override
+      swagger-initializer.js to load project spec instead o…)
+  ⎿  [fix/swagger-initializer-petstore 28a1ac2] fix: override swagger-initi
+     alizer.js to load project spec instead of petstore
+      2 files changed, 15 insertions(+)
+
+● Skill(claude-md-management:revise-claude-md)
+  ⎿  Successfully loaded skill · 3 tools allowed
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Step 1: Reflect
+
+  Learnings from this session:
+
+  1. swagger-ui-dist petstore gotcha — The package ships with
+  swagger-initializer.js hardcoded to
+  https://petstore.swagger.io/v2/swagger.json. Passing ?url= query params
+  doesn't override it. Fix: serve a custom /swagger-initializer.js route before
+  the static middleware.
+  2. makeReqRes() mock res is missing send — The existing mock helper only has
+  sendFile, redirect, status, json, type. Any new route using res.send() will
+  throw in tests unless send is added to the mock.
+  3. openapi.yaml is fully authored — It's already complete and correct; no need
+   to audit it when debugging Swagger UI display issues.
+
+  ---
+  Step 3: Draft Additions
+
+  The first two are worth capturing. The third is implicit from the existing
+  docs section.
+
+  ---
+  Proposed Update: .claude/rules/coding-patterns.md
+
+  Why: Future sessions dealing with swagger-ui-dist will hit the same petstore
+  override issue — this saves debugging time.
+
+  + ## Swagger UI (swagger-ui-dist)
+  + - Ships with `swagger-initializer.js` hardcoded to petstore URL — `?url=` 
+  query param does NOT override it
+  + - Fix: add `router.get("/swagger-initializer.js", ...)` **before** 
+  `router.use(express.static(...))` to serve a custom initializer pointing to 
+  `/docs/spec`
+
+  ---
+  Proposed Update: .claude/rules/testing-patterns.md
+
+  Why: The makeReqRes() mock helper is missing send, which causes confusing
+  TypeError: res.send is not a function in any new route test that calls
+  res.send().
+
+    function mockReqRes() {
+      return {
+        type: vi.fn().mockReturnThis(),
+        sendFile: vi.fn().mockReturnThis(),
+        redirect: vi.fn().mockReturnThis(),
+  +     send: vi.fn().mockReturnThis(),
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn().mockReturnThis(),
+      } as unknown as Response;
+    }
+
+  ---
+  Shall I apply both changes?
+
+✻ Crunched for 3m 6s
+
+❯ yes                                                                           
+  ⎿  Loaded .claude/CLAUDE.md
+
+  Read 2 files (ctrl+o to expand)
+
+● Update(.claude/rules/coding-patterns.md)
+  ⎿  Added 4 lines
+      89  - `JwtPayload`: `{ sub: string, email: string, permissions: str
+          ing[] }`
+      90  - Services accept `XxxInput` types — never `req: Request`
+      91  
+      92 +## Swagger UI (swagger-ui-dist)                                
+      93 +- Ships with `swagger-initializer.js` hardcoded to petstore URL
+         + — `?url=` query param does NOT override it                    
+      94 +- Fix: add `router.get("/swagger-initializer.js", ...)` **befor
+         +e** `router.use(express.static(...))` to serve a custom initial
+         +izer pointing to `/docs/spec`                                  
+      95 +                                                               
+      96  ## Module/Import Conventions
+      97  
+      98  - All imports use `.js` extension in TypeScript source (ESM int
+          erop, even in commonjs project)
+
+● Update(.claude/rules/testing-patterns.md)
+  ⎿  Added 1 line, removed 1 line
+      44    return { headers: {}, body: {}, user: undefined, ...overrides
+           } as unknown as Request;
+      45  }
+      46  function mockRes() {
+      47 -  return { status: vi.fn().mockReturnThis(), json: vi.fn().mock
+         -ReturnThis() } as unknown as Response;                         
+      47 +  return { status: vi.fn().mockReturnThis(), json: vi.fn().mock
+         +ReturnThis(), send: vi.fn().mockReturnThis() } as unknown as Re
+         +sponse;                                                        
+      48  }
+      49  ```
+      50  
+
+● Now commit and push:
+
+● Bash(git add .claude/rules/coding-patterns.md
+      .claude/rules/testing-patterns.md && git commit -m "docs: update CLAUDE.md
+       with swagger-ui-dist petstore gotcha and moc…)
+  ⎿  [fix/swagger-initializer-petstore 02bf5c3] docs: update CLAUDE.md with
+      swagger-ui-dist petstore gotcha and mockRes send method
+      2 files changed, 5 insertions(+), 1 deletion(-)
+
+● Skill(commit-commands:commit-push-pr)
+  ⎿  Successfully loaded skill · 6 tools allowed
+
+● Bash(git add Dockerfile && git commit -m "$(cat <<'EOF'
+      fix: override swagger-initializer.js to load project spec instead of
+      petstore…)
+  ⎿  [fix/swagger-initializer-petstore c731663] fix: override swagger-initi
+     alizer.js to load project spec instead of petstore
+      1 file changed, 2 insertions(+), 2 deletions(-)
+● Bash(git push -u origin fix/swagger-initializer-petstore)
+  ⎿  remote:
+     remote: Create a pull request for 'fix/swagger-initializer-petstore' o
+     n GitHub by visiting:
+     … +8 lines (ctrl+o to expand)
+
+● Bash(gh pr create --title "fix: Swagger UI shows project API instead of
+      Petstore" --body "$(cat <<'EOF'
+      ## Summary…)
+  ⎿  https://github.com/doccerz/user-microservice-js/pull/25
+
+● PR created: https://github.com/doccerz/user-microservice-js/pull/25
+
+✻ Worked for 45s
+
+❯ /context                                                                      
+  ⎿  Context Usage
+     ⛁ ⛀ ⛁ ⛁ ⛁ ⛁ ⛀ ⛀ ⛁ ⛁   claude-sonnet-4-6 · 44k/200k tokens (22%)
+     ⛀ ⛀ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ 
+     ⛁ ⛁ ⛁ ⛁ ⛁ ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 3.4k tokens (1.7%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System tools: 9.1k tokens (4.5%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Custom agents: 201 tokens (0.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 5.2k tokens (2.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 724 tokens (0.4%)
+     ⛶ ⛶ ⛶ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝   ⛁ Messages: 26.4k tokens (13.2%)
+     ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝ ⛝   ⛶ Free space: 122k (61.0%)
+                           ⛝ Autocompact buffer: 33k tokens (16.5%)
+
+     MCP tools · /mcp (loaded on-demand)
+
+     Available
+     └ mcp__plugin_playwright_playwright__browser_close
+     └ mcp__plugin_playwright_playwright__browser_resize
+     └ mcp__plugin_playwright_playwright__browser_console_messages
+     └ mcp__plugin_playwright_playwright__browser_handle_dialog
+     └ mcp__plugin_playwright_playwright__browser_evaluate
+     └ mcp__plugin_playwright_playwright__browser_file_upload
+     └ mcp__plugin_playwright_playwright__browser_fill_form
+     └ mcp__plugin_playwright_playwright__browser_install
+     └ mcp__plugin_playwright_playwright__browser_press_key
+     └ mcp__plugin_playwright_playwright__browser_type
+     └ mcp__plugin_playwright_playwright__browser_navigate
+     └ mcp__plugin_playwright_playwright__browser_navigate_back
+     └ mcp__plugin_playwright_playwright__browser_network_requests
+     └ mcp__plugin_playwright_playwright__browser_run_code
+     └ mcp__plugin_playwright_playwright__browser_take_screenshot
+     └ mcp__plugin_playwright_playwright__browser_snapshot
+     └ mcp__plugin_playwright_playwright__browser_click
+     └ mcp__plugin_playwright_playwright__browser_drag
+     └ mcp__plugin_playwright_playwright__browser_hover
+     └ mcp__plugin_playwright_playwright__browser_select_option
+     └ mcp__plugin_playwright_playwright__browser_tabs
+     └ mcp__plugin_playwright_playwright__browser_wait_for
+
+     Custom agents · /agents
+
+     Plugin
+     └ feature-dev:code-architect: 53 tokens
+     └ feature-dev:code-reviewer: 52 tokens
+     └ code-simplifier:code-simplifier: 49 tokens
+     └ feature-dev:code-explorer: 47 tokens
+
+     Memory files · /memory
+     └ .claude/CLAUDE.md: 191 tokens
+     └ .claude/rules/testing-patterns.md: 1.4k tokens
+     └ .claude/rules/service-workflows.md: 401 tokens
+     └ .claude/rules/git-workflow.md: 602 tokens
+     └ .claude/rules/coding-patterns.md: 1.6k tokens
+     └ .claude/rules/project-overview.md: 961 tokens
+
+     Skills · /skills
+
+     Plugin
+     └ claude-md-improver: 95 tokens
+     └ skill-creator: 87 tokens
+     └ commit-commands:clean_gone: 46 tokens
+     └ feature-dev:feature-dev: 25 tokens
+     └ claude-md-management:revise-claude-md: 22 tokens
+     └ commit-commands:commit-push-pr: 15 tokens
+     └ code-review:code-review: 13 tokens
+     └ commit-commands:commit: 11 tokens
+
+❯ Failed to load API definition.                                                
+Errors                                                                          
+Hide                                                                            
+                                                                                
+Fetch error                                                                     
+Internal Server Error /docs/spec                                                
+                                                                                
+
+● The server is returning a 500 on GET /docs/spec. Let me check what's going
+  wrong.
+
+  Read 1 file (ctrl+o to expand)
+
+● The GET /docs/spec route uses res.sendFile() with a relative-ish path built
+  from __dirname. When running via tsx (dev) or compiled JS, __dirname differs.
+  Let me check what __dirname resolves to at runtime vs where the file actually
+  lives.
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(node -e "console.log(require('path').join('/home/babin/code/user-microser
+      vice-js/src/routes', '../docs/openapi.yaml'))")
+  ⎿  /home/babin/code/user-microservice-js/src/docs/openapi.yaml
+
+● Path is correct for src/. Now check how the server is actually running —
+  compiled from dist/ or source:
+
+● Bash(docker compose ps 2>/dev/null || echo "no compose"; ps aux | grep
+      "node\|tsx" | grep -v grep | head -10)
+  ⎿  NAME                         IMAGE                      COMMAND
+                SERVICE   CREATED              STATUS
+       PORTS
+     … +56 lines (ctrl+o to expand)
+
+● Running in Docker from compiled dist/. The __dirname resolves to dist/routes/,
+   so path.join(__dirname, "../docs/openapi.yaml") looks for
+  dist/docs/openapi.yaml which doesn't exist. Let me verify:
+
+● Bash(docker compose exec app ls dist/docs/ 2>/dev/null || echo "dist/docs not
+      found")
+  ⎿  dist/docs not found
+
+● Confirmed. The openapi.yaml isn't copied during build. Let me check the
+  Dockerfile:
+
+  Read 1 file (ctrl+o to expand)
+
+● tsc only copies TS files — .yaml stays behind. The fix is to copy src/docs/
+  into dist/docs/ in the Dockerfile builder stage, then the runtime stage
+  already picks it up via COPY --from=builder /app/dist ./dist.
+
+● Update(Dockerfile)
+  ⎿  Added 1 line, removed 1 line
+      13  COPY src/ ./src/
+      14  COPY drizzle/ ./drizzle/
+      15  
+      16 -RUN npm run build                                              
+      16 +RUN npm run build && cp -r src/docs dist/docs                  
+      17  
+      18  RUN npm prune --omit=dev
+      19  
+
+● Bash(docker compose build app 2>&1 | tail -5)
+  ⎿  #23 DONE 0.0s
+
+     #24 resolving provenance for metadata file
+     … +2 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+● Bash(docker compose up -d app && sleep 3 && curl -s -o /dev/null -w
+      "%{http_code}" http://localhost:3000/docs/spec)
+  ⎿   Container user-microservice-js-db-1  Running
+      Container user-microservice-js-app-1  Recreate
+      Container user-microservice-js-app-1  Recreated
+     … +5 lines (ctrl+o to expand)
+
+● /docs/spec returns 200. Commit and push:
+
+● Bash(git add Dockerfile && git commit -m "fix: copy src/docs to dist/docs in
+      Docker build so openapi.yaml is served at runtime")
+  ⎿  [fix/swagger-initializer-petstore 7a0ea63] fix: copy src/docs to dist/
+     docs in Docker build so openapi.yaml is served at runtime
+      1 file changed, 1 insertion(+), 1 deletion(-)
+
+● Bash(git push)
+  ⎿  To github.com:doccerz/user-microservice-js.git
+        c731663..7a0ea63  fix/swagger-initializer-petstore -> fix/swagger-i
+     nitializer-petstore
+
+● Fixed. The root cause was that tsc only compiles .ts files — .yaml files
+  aren't copied to dist/. Added cp -r src/docs dist/docs after npm run build in
+  the Dockerfile so the spec is available at runtime.
+
+  Also worth adding to CLAUDE.md:
+
+● Update(.claude/rules/project-overview.md)
+  ⎿  File must be read first
+  Read 1 file (ctrl+o to expand)
+
+● Update(.claude/rules/project-overview.md)
+  ⎿  Added 1 line
+      76  - `argon2` is a native addon — builder stage needs `apk add --n
+          o-cache python3 make g++` (Alpine) to compile it
+      77  - `npm run db:migrate` uses `tsx` (dev dep), so run migrations 
+          from host or add a compiled migrate entrypoint for containers
+      78  - `docker-compose.yml`: db service named `db`; DATABASE_URL use
+          s `@db:5432`; startup order: `docker-compose up -d db` → `npm r
+          un db:migrate && npm run db:seed` → `docker-compose up app`
+      79 +- `tsc` only emits `.ts` files — non-TS assets (e.g. `src/docs/
+         +openapi.yaml`) must be copied manually in the Dockerfile: `cp -
+         +r src/docs dist/docs` after `npm run build`                    
+      80  - `jq` is not installed — use raw `curl` output for API testing
+           (no `| jq`)
+      81  - psql shorthand: `docker compose exec db psql -U user -d iam_d
+          b` — schema tables need quoting: `"user-service".<table>`
+
+● Bash(git add .claude/rules/project-overview.md && git commit -m "docs: note
+      that non-TS assets must be manually copied to dist in Dockerfile")
+  ⎿  [fix/swagger-initializer-petstore e9cfa09] docs: note that non-TS asse
+     ts must be manually copied to dist in Dockerfile
+      1 file changed, 1 insertion(+)
+
+● Bash(git push)
+  ⎿  To github.com:doccerz/user-microservice-js.git
+        7a0ea63..e9cfa09  fix/swagger-initializer-petstore -> fix/swagger-i
+     nitializer-petstore
+
+● Done. Swagger UI should now load the IAM API spec correctly. Navigate to
+  http://localhost:3000/docs/ to verify.
+
+✻ Churned for 1m 45s
+
+❯ save plan: specs/v1/issues/swagger/plan.md                                    
+
+● Bash(mkdir -p /home/babin/code/user-microservice-js/specs/v1/issues/swagger)
+  ⎿  Done
+
+● Write(specs/v1/issues/swagger/plan.md)
+  ⎿  Wrote 54 lines to specs/v1/issues/swagger/plan.md
+      1 # Swagger UI Showing Petstore Instead of Project API
+      2 
+      3 ## Problem
+      4 
+      5 Navigating to `/docs/` displayed the Swagger Petstore example API
+         instead of the IAM Microservice API. Two root causes were found:
+      6 
+      7 1. **`swagger-ui-dist` petstore override** — The package ships wi
+        th `swagger-initializer.js` hardcoded to `https://petstore.swagge
+        r.io/v2/swagger.json`. The `?url=` query param passed in the redi
+        rect (`/docs/index.html?url=/docs/spec`) does not override this b
+        ecause the initializer's `window.onload` runs after the HTML load
+        s and ignores the query param.
+      8 
+      9 2. **`openapi.yaml` not in Docker image** — `tsc` only emits `.ts
+        ` files. The `src/docs/openapi.yaml` asset was never copied to `d
+        ist/`, so `GET /docs/spec` returned a 500 (file not found) when r
+        unning in Docker.
+     … +44 lines (ctrl+o to expand)
+
+● Bash(git add specs/v1/issues/swagger/plan.md && git commit -m "docs: save
+      swagger petstore issue plan to specs/v1/issues/swagger/plan.md")
+  ⎿  [fix/swagger-initializer-petstore 1466162] docs: save swagger petstore
+      issue plan to specs/v1/issues/swagger/plan.md
+      1 file changed, 54 insertions(+)
+      create mode 100644 specs/v1/issues/swagger/plan.md
+
+● Bash(git push)
+  ⎿  To github.com:doccerz/user-microservice-js.git
+        e9cfa09..1466162  fix/swagger-initializer-petstore -> fix/swagger-i
+     nitializer-petstore
+
+● Saved to specs/v1/issues/swagger/plan.md and pushed.

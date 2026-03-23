@@ -44,7 +44,7 @@ function mockReq(overrides = {}) {
   return { headers: {}, body: {}, user: undefined, ...overrides } as unknown as Request;
 }
 function mockRes() {
-  return { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() } as unknown as Response;
+  return { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() } as unknown as Response;
 }
 ```
 

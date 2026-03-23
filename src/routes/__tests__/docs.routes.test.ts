@@ -43,6 +43,7 @@ function makeReqRes() {
     type: vi.fn().mockReturnThis(),
     sendFile: vi.fn().mockReturnThis(),
     redirect: vi.fn().mockReturnThis(),
+    send: vi.fn().mockReturnThis(),
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
   } as unknown as Response;
@@ -87,6 +88,32 @@ describe("docs.routes", () => {
       handler!(req, res, next);
 
       expect(res.redirect).toHaveBeenCalledWith("/docs/index.html?url=/docs/spec");
+    });
+  });
+
+  describe("GET /swagger-initializer.js", () => {
+    it("returns javascript content type", () => {
+      const { req, res, next } = makeReqRes();
+      const handler = getHandler("get", "/swagger-initializer.js");
+      expect(handler).toBeDefined();
+
+      handler!(req, res, next);
+
+      expect(res.type).toHaveBeenCalledWith("application/javascript");
+    });
+
+    it("sends SwaggerUIBundle config pointing to /docs/spec", () => {
+      const { req, res, next } = makeReqRes();
+      const handler = getHandler("get", "/swagger-initializer.js");
+      const mockSend = vi.fn().mockReturnThis();
+      (res as unknown as { send: typeof mockSend }).send = mockSend;
+
+      handler!(req, res, next);
+
+      expect(mockSend).toHaveBeenCalledOnce();
+      const body: string = mockSend.mock.calls[0][0] as string;
+      expect(body).toContain('url: "/docs/spec"');
+      expect(body).not.toContain("petstore");
     });
   });
 
