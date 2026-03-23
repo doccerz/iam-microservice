@@ -13,7 +13,7 @@ COPY tsconfig.json ./
 COPY src/ ./src/
 COPY drizzle/ ./drizzle/
 
-RUN npm run build
+RUN npm run build && cp -r src/docs dist/docs
 
 RUN npm prune --omit=dev
 
