@@ -268,15 +268,33 @@ describe("users.service", () => {
 
     it("updates profile fields when provided", async () => {
       mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) => {
-        mockTx.where.mockResolvedValueOnce([existingUser]); // fetch user
-        mockTx.returning.mockResolvedValueOnce([existingUser]); // update returning (isActive not changed)
-        mockTx.where.mockResolvedValue([]); // profile update
+        mockTx.where
+          .mockResolvedValueOnce([existingUser]) // 1st: select user
+          .mockResolvedValueOnce([]); // 2nd: update profiles .where()
         return fn(mockTx);
       });
 
       await updateUser(validUuid, { firstName: "Alice" });
 
       expect(mockTx.update).toHaveBeenCalled();
+      expect(mockTx.set).toHaveBeenCalledWith(expect.objectContaining({ firstName: "Alice" }));
+    });
+
+    it("updates both users and profiles tables when isActive and profile fields are both provided", async () => {
+      const updatedUser = { ...existingUser, isActive: false };
+      mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) => {
+        mockTx.where
+          .mockResolvedValueOnce([existingUser]) // 1st: select user
+          .mockReturnValueOnce(mockTx) // 2nd: update users .where() → chain to .returning()
+          .mockResolvedValueOnce([]); // 3rd: update profiles .where()
+        mockTx.returning.mockResolvedValueOnce([updatedUser]);
+        return fn(mockTx);
+      });
+
+      const result = await updateUser(validUuid, { isActive: false, firstName: "Alice" });
+
+      expect(mockTx.update).toHaveBeenCalledTimes(2); // once for users, once for profiles
+      expect(result.isActive).toBe(false);
     });
 
     it("returns updated user data", async () => {
