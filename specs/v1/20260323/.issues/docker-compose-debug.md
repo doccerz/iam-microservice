@@ -48,7 +48,7 @@
 | `POST /auth/refresh` | ✅ Working | Field name is `token`, not `refreshToken` |
 | `POST /auth/change-password` | ✅ Working | Returns `{ success: true }` |
 | `GET /users` | ✅ Working | Fixed — `Object.defineProperty` for `req.query` in Express 5 |
-| `PATCH /users/:id` | ❓ Untested | |
+| `PATCH /users/:id` | ✅ Working | Requires `user:write` permission; returns `{ id, email, isActive, updatedAt }` |
 | `PUT /users/:id/roles` | ❓ Untested | |
 | `POST /users` | ❓ Untested | Requires `user:write` permission |
 
