@@ -56,18 +56,34 @@ The server will be available at `http://localhost:3000`.
 
 ## Docker
 
-### Run with Docker Compose (recommended)
+### Pull from Docker Hub
 
 ```bash
+docker pull doccerz/user-microservice-js:latest
+```
+
+### Run with Docker Compose using the registry image (recommended)
+
+Copy the example compose file and fill in your environment variables:
+
+```bash
+cp docker-compose.yml.example docker-compose.yml
+# edit docker-compose.yml or create a .env file with the required variables
 docker-compose up
 ```
 
 The app container runs migrations and seeds the database automatically before starting the server (via `entrypoint.sh`). No host-side Node.js required.
 
+### Run with Docker Compose (build locally)
+
+```bash
+docker-compose up
+```
+
 ### Build the image manually
 
 ```bash
-docker build -t iam-microservice .
+docker build -t doccerz/user-microservice-js:latest .
 ```
 
 ### Environment variables (Docker Compose)
