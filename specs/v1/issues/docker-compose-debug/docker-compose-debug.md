@@ -50,7 +50,7 @@
 | `GET /users` | ✅ Working | Verified in Docker — `Object.defineProperty` fix confirmed working |
 | `PATCH /users/:id` | ✅ Working | Verified in Docker — isActive, profile fields, combined, empty-body 400, 404 all correct |
 | `PUT /users/:id/roles` | ✅ Working | Verified in Docker — delete+insert transaction confirmed, 404 on unknown user, 400 on missing/empty roleIds, 401 on missing token |
-| `POST /users` | ❓ Untested | Requires `user:write` permission |
+| `POST /users` | ✅ Working | Admin token required (`user:write`); `roleIds` must be valid UUIDs from roles table; 409 on duplicate email, 401 on missing token, 400 on empty `roleIds` |
 
 ---
 
