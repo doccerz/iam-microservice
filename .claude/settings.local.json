@@ -43,7 +43,14 @@
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmOThkOWQ3Ny04OWNiLTQzYTAtODlkYi1lY2E2NDE3NDRkZjYiLCJlbWFpbCI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwicGVybWlzc2lvbnMiOlsidXNlcjpyZWFkIiwidXNlcjp3cml0ZSIsInVzZXI6ZGVsZXRlIiwicm9sZTpyZWFkIiwicm9sZTp3cml0ZSIsInVzZXI6cmVhZCJdLCJpYXQiOjE3NzQyMzE4OTYsImV4cCI6MTc3NDIzMjc5Nn0.KHR9LDuisAz-vyFfgsOeemX0x38tCiAu2o31HtcXujc\" curl -s \"http://localhost:3000/users\" -H \"Authorization: Bearer $TOKEN\" docker compose logs app --since 5s)",
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmOThkOWQ3Ny04OWNiLTQzYTAtODlkYi1lY2E2NDE3NDRkZjYiLCJlbWFpbCI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwicGVybWlzc2lvbnMiOlsidXNlcjpyZWFkIiwidXNlcjp3cml0ZSIsInVzZXI6ZGVsZXRlIiwicm9sZTpyZWFkIiwicm9sZTp3cml0ZSIsInVzZXI6cmVhZCJdLCJpYXQiOjE3NzQyMzE5NjIsImV4cCI6MTc3NDIzMjg2Mn0.qzeLtMPx80sHZq8XHo3o2Ojc971I4nGjtFytqqN-iEA\")",
       "Bash(__NEW_LINE_2f59f19d5bb87fbd__ echo:*)",
-      "Bash(__NEW_LINE_6a2da7df9a514fe6__ echo:*)"
+      "Bash(__NEW_LINE_6a2da7df9a514fe6__ echo:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4ZGRiMDQ0Ny1mMjU2LTRiZjUtYTZlOC1jMjY0YzBiYWFjMjUiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicGVybWlzc2lvbnMiOlsidXNlcjpyZWFkIiwidXNlcjp3cml0ZSIsInVzZXI6ZGVsZXRlIiwicm9sZTpyZWFkIiwicm9sZTp3cml0ZSIsInVzZXI6cmVhZCJdLCJpYXQiOjE3NzQyMzMwNzksImV4cCI6MTc3NDIzMzk3OX0.Fj7W-WQh_n2QOqYU6YOO8xdI_CXwhs-iKsSaNkIltHA\")",
+      "Bash(TARGET_ID=\"7d5e8afb-5376-47de-815d-7a3cf4c1498b\")",
+      "Bash(ADMIN_ROLE=\"e48fe298-5ecf-45a2-aa85-743be74f72c6\")",
+      "Bash(__NEW_LINE_edf88cb829535e6a__ echo:*)",
+      "Bash(USER_ROLE=\"98ce3087-efca-4952-bfac-378f1baba29c\")",
+      "Bash(__NEW_LINE_f73541bfaf881c41__ echo:*)",
+      "Bash(__NEW_LINE_0709cf9980e32f05__ echo:*)"
     ]
   }
 }
