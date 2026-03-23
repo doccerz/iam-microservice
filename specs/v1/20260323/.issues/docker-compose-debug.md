@@ -47,8 +47,8 @@
 | `POST /auth/login` | ✅ Working | Returns `accessToken` + `refreshToken` |
 | `POST /auth/refresh` | ✅ Working | Field name is `token`, not `refreshToken` |
 | `POST /auth/change-password` | ✅ Working | Returns `{ success: true }` |
-| `GET /users` | ✅ Working | Fixed — `Object.defineProperty` for `req.query` in Express 5 |
-| `PATCH /users/:id` | ✅ Working | Requires `user:write` permission; returns `{ id, email, isActive, updatedAt }` |
+| `GET /users` | ✅ Working | Verified in Docker — `Object.defineProperty` fix confirmed working |
+| `PATCH /users/:id` | ✅ Working | Verified in Docker — isActive, profile fields, combined, empty-body 400, 404 all correct |
 | `PUT /users/:id/roles` | ❓ Untested | |
 | `POST /users` | ❓ Untested | Requires `user:write` permission |
 
@@ -60,3 +60,6 @@
 - `POST /auth/refresh` field name is `token` (not `refreshToken`) per `refreshSchema` in `src/validators/auth.validators.ts`
 - Access token TTL is 15m — tokens expire quickly during testing
 - Default seed creates a `user` role with `user:read` permission; newly registered users only get `user:read`
+- To test admin endpoints: grant admin role in DB directly — `INSERT INTO "user-service".user_roles (user_id, role_id) VALUES ('<uid>', '<admin-role-id>')`; then re-login
+- After code changes, always `docker compose build app` before `docker compose up -d app` — Compose does not auto-rebuild on source changes
+- `npm run db:migrate` / `npm run db:seed` must run from inside Docker network (hostname `db` only resolves inside the compose network); the app container's entrypoint handles this on startup
