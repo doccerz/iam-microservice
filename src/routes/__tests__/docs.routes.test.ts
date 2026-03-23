@@ -43,6 +43,7 @@ function makeReqRes() {
     type: vi.fn().mockReturnThis(),
     sendFile: vi.fn().mockReturnThis(),
     redirect: vi.fn().mockReturnThis(),
+    send: vi.fn().mockReturnThis(),
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
   } as unknown as Response;
