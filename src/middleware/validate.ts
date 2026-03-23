@@ -23,7 +23,12 @@ export function validateQuery(schema: z.ZodTypeAny) {
       sendError(res, message, 400);
       return;
     }
-    req.query = result.data as typeof req.query;
+    Object.defineProperty(req, "query", {
+      value: result.data,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
     next();
   };
 }
