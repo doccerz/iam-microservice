@@ -102,6 +102,9 @@ package.json
 - [x] Task 5.1: Dockerfile
 - [x] Task 5.2: docker-compose.yml
 
+### Phase 6: API Documentation
+- [x] Task 6.1: OpenAPI 3.1 spec + Swagger UI served at `/docs`
+
 ---
 
 ## Phase 0: Project Initialization

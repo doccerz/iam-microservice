@@ -75,6 +75,7 @@ export const registerSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 ```
 
+- **Zod 4 `toJSONSchema` + transforms:** throws on `.transform()` calls — cannot auto-generate OpenAPI/JSON Schema from validators; hand-author specs instead
 - Transforms (`.trim()`, `.toLowerCase()`) applied at schema level — not in services
 - `loginSchema` uses `z.string().min(1)` for password (no strength check)
 - Optional fields: `.optional()` not `.nullable()`
@@ -91,6 +92,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 ## Module/Import Conventions
 
 - All imports use `.js` extension in TypeScript source (ESM interop, even in commonjs project)
+- **CJS packages with no ESM exports** (e.g. `swagger-ui-dist`): use `require("pkg") as { ... }` inside `.ts` — project is `"type": "commonjs"` so this is valid
 - `src/utils/index.ts` — barrel re-exports all utils; middleware imports from `../utils/index.js`
 - `src/db/schema/index.ts` — barrel for all table definitions
 - No cross-layer skipping: routes → middleware → services → db
