@@ -15,7 +15,7 @@ vi.mock("../../config/env.js", () => ({
   },
 }));
 
-import { validate } from "../validate.js";
+import { validate, validateQuery } from "../validate.js";
 
 describe("middleware/validate.ts", () => {
   let mockReq: Partial<Request> & { body: unknown };
@@ -117,6 +117,88 @@ describe("middleware/validate.ts", () => {
     validate(schema)(mockReq as Request, mockRes as unknown as Response, mockNext as NextFunction);
 
     expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+});
+
+describe("validateQuery", () => {
+  let mockReq: Partial<Request> & { query: Record<string, unknown> };
+  let mockRes: { status: ReturnType<typeof vi.fn>; json: ReturnType<typeof vi.fn> };
+  let mockNext: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockReq = { query: {} };
+    mockRes = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+    };
+    mockNext = vi.fn();
+  });
+
+  it("calls next() when query matches schema", () => {
+    const schema = z.object({ page: z.coerce.number().default(1) });
+    mockReq.query = { page: "2" };
+
+    validateQuery(schema)(mockReq as unknown as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockNext).toHaveBeenCalledWith();
+    expect(mockNext).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes coerced numbers to req.query", () => {
+    const schema = z.object({
+      page: z.coerce.number().default(1),
+      limit: z.coerce.number().default(20),
+    });
+    mockReq.query = { page: "3", limit: "50" };
+
+    validateQuery(schema)(mockReq as unknown as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect((mockReq as unknown as Request).query).toEqual({ page: 3, limit: 50 });
+  });
+
+  it("applies defaults when query params are absent", () => {
+    const schema = z.object({
+      page: z.coerce.number().default(1),
+      limit: z.coerce.number().default(20),
+    });
+    mockReq.query = {};
+
+    validateQuery(schema)(mockReq as unknown as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect((mockReq as unknown as Request).query).toMatchObject({ page: 1, limit: 20 });
+  });
+
+  it("transforms isActive string to boolean", () => {
+    const schema = z.object({
+      isActive: z.string().optional().transform((v) => (v === undefined ? undefined : v === "true")),
+    });
+
+    mockReq.query = { isActive: "true" };
+    validateQuery(schema)(mockReq as unknown as Request, mockRes as unknown as Response, mockNext as NextFunction);
+    expect((mockReq as unknown as Request).query).toMatchObject({ isActive: true });
+
+    mockReq.query = { isActive: "false" };
+    validateQuery(schema)(mockReq as unknown as Request, mockRes as unknown as Response, mockNext as NextFunction);
+    expect((mockReq as unknown as Request).query).toMatchObject({ isActive: false });
+  });
+
+  it("returns 400 when query is invalid", () => {
+    const schema = z.object({ page: z.coerce.number().int().positive() });
+    mockReq.query = { page: "-1" };
+
+    validateQuery(schema)(mockReq as unknown as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
+    expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+  });
+
+  it("does not call next() on validation failure", () => {
+    const schema = z.object({ page: z.coerce.number().int().positive() });
+    mockReq.query = { page: "0" };
+
+    validateQuery(schema)(mockReq as unknown as Request, mockRes as unknown as Response, mockNext as NextFunction);
+
     expect(mockNext).not.toHaveBeenCalled();
   });
 });
