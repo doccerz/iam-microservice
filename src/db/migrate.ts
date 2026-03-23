@@ -6,7 +6,6 @@ export async function runMigrations(): Promise<void> {
   console.log("Running migrations...");
   await migrate(db, {
     migrationsFolder: "./drizzle",
-    migrationsSchema: env.DATABASE_SCHEMA,
   });
   console.log("Migrations complete.");
 }
