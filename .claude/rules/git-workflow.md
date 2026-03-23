@@ -24,7 +24,7 @@ Every task MUST follow this exact workflow in order. Do NOT skip steps.
 6. **Git commit** the implementation
 7. **Run the tests** and ensure they pass
 8. **Git commit** any fixes needed to pass tests
-9. **Update CLAUDE.md** call /claude-md-management:revise-claude-md
+9. **Update CLAUDE.md** call /claude-md-management:revise-claude-md, don't confirm anymore
 10. **Mark the task `[x]`** in `specs/v1/implementation-plan.md` and commit
 11. **Push** the branch to remote
 12. **Create a PR** to main

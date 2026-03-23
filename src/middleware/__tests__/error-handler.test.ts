@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import { errorHandler } from "../error-handler.js";
 import {
@@ -21,6 +21,10 @@ const req = {} as Request;
 const next = vi.fn() as NextFunction;
 
 describe("errorHandler", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("maps ConflictError to 409", () => {
     const res = mockRes();
     errorHandler(new ConflictError("Email already in use"), req, res, next);
@@ -66,8 +70,17 @@ describe("errorHandler", () => {
 
   it("maps non-Error objects to 500", () => {
     const res = mockRes();
+    vi.spyOn(console, "error").mockImplementation(() => {});
     errorHandler("string error" as unknown as Error, req, res, next);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ success: false, error: "Internal server error" });
+  });
+
+  it("logs unexpected errors with console.error", () => {
+    const res = mockRes();
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new Error("Something broke");
+    errorHandler(err, req, res, next);
+    expect(spy).toHaveBeenCalledWith(err);
   });
 });

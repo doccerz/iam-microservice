@@ -36,6 +36,7 @@ router.get("/path", authenticate, authorize("resource:action"), asyncHandler(...
 - `authorize(...permissions)` — factory; AND-logic check of all perms against `req.user.permissions`; `authorize()` with no args always passes
 - `validate(schema)` — factory; calls `sendError` + returns (no `next`) on failure; replaces `req.body` with transformed data on success
 - `validateQuery(schema)` — same as `validate` but parses `req.query`; use for GET endpoints with query params
+  - **Express 5 gotcha:** `req.query` is a getter-only accessor on the prototype; assignment throws `TypeError` in strict mode. `validateQuery` uses `Object.defineProperty(req, "query", { value: result.data, writable: true, configurable: true, enumerable: true })` — do NOT revert to direct assignment
 
 ## Service Layer
 
