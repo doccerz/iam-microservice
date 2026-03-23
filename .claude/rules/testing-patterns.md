@@ -105,6 +105,16 @@ mockTx.where
 mockTx.returning.mockResolvedValueOnce([updatedRow]);
 ```
 
+When a third `where` call follows (e.g. a second table update after the first), use `mockReturnValueOnce(mockTx)` — not `mockReturnValue` — for the middle call so the persistent default doesn't swallow the terminating call:
+
+```ts
+mockTx.where
+  .mockResolvedValueOnce([existingRow])  // 1st: select terminates
+  .mockReturnValueOnce(mockTx)           // 2nd: update chain → .returning() (Once, not persistent)
+  .mockResolvedValueOnce([]);            // 3rd: second table update terminates
+mockTx.returning.mockResolvedValueOnce([updatedRow]);
+```
+
 ## `dist/` stale test files
 
 Vitest picks up compiled `.js` test files from `dist/` alongside `src/`. If you see a wall of `FAIL dist/**/*.test.js` failures, run `rm -rf dist/` to clear them — they are not real failures.
