@@ -7,6 +7,7 @@
 - Custom `AppError` subclasses (ConflictError, UnauthorizedError, ForbiddenError, NotFoundError)
 - `onConflictDoNothing()` for idempotent seeding
 - Reusable `getUserPermissions(userId)` for login + refresh flows
+- `logger` (`src/utils/logger.ts`) — use `logger.info()`/`logger.error()` instead of bare `console.log`/`console.error` in all production files; re-exported from barrel
 
 ## Error Handling
 
