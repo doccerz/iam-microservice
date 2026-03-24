@@ -1,6 +1,7 @@
 import { inArray } from "drizzle-orm";
 import { db, sql } from "./index.js";
 import { permissions, roles, rolePermissions } from "./schema/index.js";
+import { logger } from "../utils/logger.js";
 
 const SEED_PERMISSIONS = [
   { slug: "user:read", description: "Read user data" },
@@ -21,7 +22,7 @@ const ROLE_PERMISSION_MAP: Record<string, string[]> = {
 };
 
 export async function seedDatabase(): Promise<void> {
-  console.log("Seeding database...");
+  logger.info("Seeding database...");
 
   // Insert permissions (idempotent)
   await db.insert(permissions).values(SEED_PERMISSIONS).onConflictDoNothing();
@@ -70,14 +71,14 @@ export async function seedDatabase(): Promise<void> {
     .values(rolePermissionValues)
     .onConflictDoNothing();
 
-  console.log("Seeding complete.");
+  logger.info("Seeding complete.");
 }
 
 if (require.main === module) {
   seedDatabase()
     .then(() => sql.end())
     .catch((err) => {
-      console.error("Seed failed:", err);
+      logger.error("Seed failed:", err);
       process.exit(1);
     });
 }
