@@ -2,11 +2,12 @@
 
 <!-- Detailed rules are split into focused files under .claude/rules/ -->
 
-@.claude/rules/project-overview.md
-@.claude/rules/coding-patterns.md
-@.claude/rules/testing-patterns.md
-@.claude/rules/git-workflow.md
-@.claude/rules/service-workflows.md
+- [Project overview](./rules/project-overview.md)
+- [Coding patterns](./rules/coding-patterns.md)
+- [Testing patterns](./rules/testing-patterns.md)
+- [Git workflow](./rules/git-workflow.md)
+- [Service workflows](./rules/service-workflows.md)
+
 
 # Input specs location
 

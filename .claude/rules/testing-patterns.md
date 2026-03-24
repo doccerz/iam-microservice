@@ -119,8 +119,6 @@ mockTx.returning.mockResolvedValueOnce([updatedRow]);
 
 Vitest picks up compiled `.js` test files from `dist/` alongside `src/`. If you see a wall of `FAIL dist/**/*.test.js` failures, run `rm -rf dist/` to clear them — they are not real failures.
 
-**Known pre-existing failure:** `src/db/__tests__/migrate.test.ts > calls migrate with the db instance and correct config` — failing on `main`; do not treat as a regression.
-
 ## Describe structure
 
 Nested `describe` per exported function; `beforeEach` with `vi.clearAllMocks()`; type assertions via `expectTypeOf`.
