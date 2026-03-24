@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --no-package-lock
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org
+
+      - name: Run tests
+        run: npm test
+        # DATABASE_URL intentionally absent — real-DB tests use
+        # it.skipIf(!process.env.DATABASE_URL) and self-skip in CI
+
+  docker-build:
+    name: Docker smoke test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+
+  auto-merge:
+    name: Auto-approve and merge (to staging only)
+    needs: [test, docker-build]
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'staging'
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Approve PR
+        run: |
+          gh pr review "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --approve \
+            --body "CI passed (tests + Docker build). Auto-approving to staging."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge
+        run: |
+          gh pr merge "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --merge \
+            --auto \
+            --delete-branch=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

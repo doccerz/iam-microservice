@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM node:24-slim AS builder
 
 # Install build tools required for argon2 native compilation
 RUN apk add --no-cache python3 make g++
@@ -18,7 +18,7 @@ RUN npm run build && cp -r src/docs dist/docs
 RUN npm prune --omit=dev
 
 # Stage 2: Runtime
-FROM node:20-alpine
+FROM node:24-slim
 
 WORKDIR /app
 
